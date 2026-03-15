@@ -104,7 +104,7 @@ struct sprite* animate_create_rectangle(size_t width, size_t height, color_t c,
  * @details
  * We currently only support filled circles. The circle pixels can be
  * determined by the following formula:
- *   x*x + y*y < r*r
+ *   x*x + y*y <= r*r
  * Where x is the x offset from the center of the circle
  *       y is the y offset from the center of the circle
  *       r is the radius of the circle
@@ -201,8 +201,8 @@ void animate_set_animation_params(struct sprite_placement* sprite_placement,
  * @param ax the acceleration in the x direction
  * @param ay the acceleration in the y direction
  */
-void animate_set_animation_funtion(struct sprite_placement* sprite_placement,
-                                   animate_fn, void* priv);
+void animate_set_animation_function(struct sprite_placement* sprite_placement,
+                                    animate_fn, void* priv);
 
 /**
  * @brief Return the size in bytes of an animation frame
