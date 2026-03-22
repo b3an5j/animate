@@ -74,9 +74,7 @@ struct bitmapv5_header {
 struct canvas* animate_create_canvas(size_t height, size_t width,
     color_t background_color)
 {
-    // a bit dangerous since height and width are size_t, safety check?
-    if (!height || !width || height > UINT32_MAX || width > UINT32_MAX) {
-        DBG_PRINT("Invalid dimension, H = %zu W = %zu\n", height, width);
+    if (!validate_dimension(height, width)) {
         return NULL;
     }
 
@@ -157,7 +155,7 @@ struct sprite* animate_create_sprite(const char* file)
     struct sprite* spt = malloc(sizeof(*spt));
     if (!spt) {
         DBG_PRINT("Failed to allocate memory for %s %s\n", "sprite", file);
-        goto fail_sprite;
+        return NULL;
     }
     spt->grid = NULL; // careful
     if ((spt->height = header_v5.bV5Height) == 0\
@@ -166,15 +164,17 @@ struct sprite* animate_create_sprite(const char* file)
             header_v5.bV5Height, header_v5.bV5Width);
         goto fail_sprite;
     }
+    spt->height = header_v5.bV5Height;
+    spt->width = header_v5.bV5Width;
+    spt->total_pixels = header_v5.bV5Height * header_v5.bV5Width;
     spt->pos.x = -1;
     spt->pos.y = -1;
+    spt->grid = NULL; // careful
 
-    // avoid SizeImage 0
-    spt->total_pixels = header_v5.bV5Height * header_v5.bV5Width;
     spt->grid = malloc(spt->total_pixels * sizeof(color_t));
     if (!spt->grid) {
-        DBG_PRINT("Failed to allocate memory for %s %s\n", \
-            "sprite grid", file);
+        DBG_PRINT("Failed to allocate memory for %s %s %ux%u\n", \
+            "sprite grid", file, spt->height, spt->width);
         goto fail_sprite;
     }
 
@@ -195,27 +195,95 @@ fail_header:
     return NULL;
 
 fail_sprite:
-
+    animate_destroy_sprite(spt);
     fclose(fp);
     return NULL;
 }
 
 struct sprite* animate_create_circle(size_t radius, color_t c, bool filled)
 {
+    // assume point is middle of pixel
+    size_t diameter = (2 * radius) - 1;
+    if (!validate_dimension(diameter, diameter)) {
+        return NULL;
+    }
+
+    /* INITIALISE SPRITE */
     struct sprite* circle = malloc(sizeof(*circle));
     if (!circle) {
         DBG_PRINT("Failed to allocate memory for %s\n", "circle sprite");
         return NULL;
     }
+    circle->height = diameter;
+    circle->width = diameter;
+    circle->total_pixels = diameter * diameter;
+    circle->pos.x = -1;
+    circle->pos.y = -1;
+    circle->grid = NULL; // careful
 
-    /* CALCULATE THE BOUNDARY AND FILL */
-    // since we only deal with radius, no odd diameter
+    circle->grid = calloc(diameter * diameter, sizeof(color_t));
+    if (!circle->grid) {
+        DBG_PRINT("Failed to allocate memory for %s radius %zu\n",
+            "circle grid", radius);
+        goto fail_circle;
+    }
+
+    /* CALCULATE THE BOUNDARY AND FILL COLOR */
+    // assume start from middle, all diameter odd, easier to place
     // if not filled, color only edges
-    size_t x = 0;
-    size_t y = radius;
-    while (x < y) {
+    // Midpoint functions are scaled by 4
+    uint32_t x = 0;
+    uint32_t y = radius - 1;
+    uint32_t offset = radius - 1;
+    // x = 0, y = radius, initial d is (scaled) 5-4r
+    int32_t d = 5 - (4 * radius);
+
+    color_t* octant1, * octant2, * octant3, * octant4, * octant5, * octant6, * octant7, * octant8;
+    while (x <= y) { // as y decreases, will meet when 45 degrees
+        octant1 = get_pixel_addr(circle->grid, (offset + y), (offset + x), diameter); // octant 1
+        octant2 = get_pixel_addr(circle->grid, (offset + x), (offset + y), diameter); // octant 2
+        octant3 = get_pixel_addr(circle->grid, (offset - x), (offset + y), diameter); // octant 3
+        octant4 = get_pixel_addr(circle->grid, (offset - y), (offset + x), diameter); // octant 4
+        octant5 = get_pixel_addr(circle->grid, (offset - y), (offset - x), diameter); // octant 5
+        octant6 = get_pixel_addr(circle->grid, (offset - x), (offset - y), diameter); // octant 6
+        octant7 = get_pixel_addr(circle->grid, (offset + x), (offset - y), diameter); // octant 7
+        octant8 = get_pixel_addr(circle->grid, (offset + y), (offset - x), diameter); // octant 8
+
+        // outline
+        *octant1 = *octant2 = *octant3 = *octant4 = *octant5 = *octant6 = *octant7 = *octant8 = c;
+        // fill left to right, right to left
+        if (filled) {
+            color_t* head;
+            head = octant3 + 1; // 3 with 2
+            while (head < octant2) { *(head++) = c; }
+            head = octant4 + 1; // 4 with 1
+            while (head < octant1) { *(head++) = c; }
+            head = octant5 + 1; // 5 with 8
+            while (head < octant8) { *(head++) = c; }
+            head = octant6 + 1;// 6 with 7
+            while (head < octant7) { *(head++) = c; }
+        }
+
+        // d_step = d_next - d
+        if (d < 0) {
+            // Y NO CHANGE
+            // d = x^2 + (y + .5)^2 - r^2
+            // d_next = (x+1)^2 + (y + .5)^2 - r^2
+            // d_step = 2x + 1 or scaled 8x + 4
+            d += 8 * x + 4;
+        }
+        else {
+            // Y CHANGE
+            // d = x^2 + (y - .5)^2 - r^2
+            // d_next = (x+1)^2 + (y - 1.5)^2 - r^2
+            // d_step = 2(x-y) + 3 or scaled 8(x-y) + 12
+            d += 8 * (x - y) + 12;
+            --y;
+        }
         ++x;
     }
+
+    return circle;
 
 fail_circle:
     animate_destroy_sprite(circle);
@@ -225,25 +293,76 @@ fail_circle:
 struct sprite* animate_create_rectangle(size_t width, size_t height,
     color_t c, bool filled)
 {
-    // TODO
+    if (!validate_dimension(height, width)) {
+        return NULL;
+    }
+
+    /* INITIALISE SPRITE */
+    struct sprite* rect = malloc(sizeof(*rect));
+    if (!rect) {
+        DBG_PRINT("Failed to allocate memory for %s\n", "rectangle sprite");
+        return NULL;
+    }
+    rect->height = height;
+    rect->width = width;
+    rect->total_pixels = width * height;
+    rect->pos.x = -1;
+    rect->pos.y = -1;
+    rect->grid = NULL; // careful
+
+    rect->grid = calloc(height * width, sizeof(color_t));
+    if (!rect->grid) {
+        DBG_PRINT("Failed to allocate memory for %s %ux%u\n",
+            "rectangle grid", rect->height, rect->width);
+        goto fail_rectangle;
+    }
+
+    /* FILL COLOR */
+    // fill all
+    if (filled) {
+        color_t* head = rect->grid;
+        for (size_t i = 0; i < rect->total_pixels; ++i) {
+            head[i] = c;
+        }
+    }
+    // outline
+    else {
+        // bottom and up
+        for (uint32_t x = 0; x < rect->width; ++x) {
+            set_pixel(rect->grid, c, x, 0, rect->width);
+            set_pixel(rect->grid, c, x, rect->height - 1, rect->width);
+        }
+        // left and right
+        for (uint32_t y = 1; y < rect->height - 1; ++y) {
+            set_pixel(rect->grid, c, 0, y, rect->width);
+            set_pixel(rect->grid, c, rect->width - 1, y, rect->width);
+        }
+    }
+
+    return rect;
+
+fail_rectangle:
+    animate_destroy_sprite(rect);
     return NULL;
 }
 
 bool animate_destroy_sprite(struct sprite* sprite)
 {
     if (!sprite) {
-        DBG_PRINT("Nothing / NULL is freed\n%s", "");
-        return 0;
+        DBG_PRINT("%s is freed\n", "Nothing / NULL");
+        return false;
     }
 
-    if ((sprite->pos).x != -1) {
-        DBG_PRINT("Sprite still in use\n%s", "");
-        return 1;
+    if (sprite->pos.x != -1 && sprite->pos.y != -1) {
+        DBG_PRINT("Sprite still in use, position (%u,%u)\n",
+            sprite->pos.x, sprite->pos.y);
+        return false;
     }
     free(sprite->grid);
     free(sprite);
-    DBG_PRINT("Sprite is freed\n%s", "");
-    return 0;
+    DBG_PRINT("%s %ux%u is freed\n", "Sprite",
+        sprite->height, sprite->width);
+    return true;
 }
 
 struct sprite_placement* animate_place_sprite(struct canvas* canvas,

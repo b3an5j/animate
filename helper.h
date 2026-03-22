@@ -14,6 +14,9 @@ union channel;
 #define DBG_PRINT(fmt, ...) do {} while(0)
 #endif
 
-color_t get_pixel(color_t* grid, int x, int y, int width);
-void set_pixel(color_t* grid, color_t value, int x, int y, int width);
+bool validate_dimension(size_t height, size_t width);
+
+color_t get_pixel(color_t* grid, uint32_t x, uint32_t y, uint32_t width);
+color_t* get_pixel_addr(color_t* grid, uint32_t x, uint32_t y, uint32_t width);
+void set_pixel(color_t* grid, color_t value, uint32_t x, uint32_t y, uint32_t width);
 #endif
