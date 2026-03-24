@@ -1,5 +1,7 @@
 #include "animate.h"
-#include "helper.h"
+#include "canvas_helper.h"
+#include "misc_helper.h"
+#include "pixel_helper.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,22 +10,23 @@ struct sprite {
     uint32_t height;
     uint32_t width;
     uint32_t total_pixels;
+    uint32_t ref_count;
     color_t* grid;
-    struct sprite_placement pos;
 };
 
 struct sprite_placement {
-    /* -1 is not in use */
     uint32_t x;
     uint32_t y;
+    struct canvas* canvas;
+    struct sprite* sprite;
 };
-/* height and width should be int32_t instead */
 
 struct canvas {
     uint32_t height;
     uint32_t width;
     size_t total_pixels;
     color_t* grid;
+    // somekind data structure to store layers
 };
 
 
@@ -167,8 +170,7 @@ struct sprite* animate_create_sprite(const char* file)
     spt->height = header_v5.bV5Height;
     spt->width = header_v5.bV5Width;
     spt->total_pixels = header_v5.bV5Height * header_v5.bV5Width;
-    spt->pos.x = -1;
-    spt->pos.y = -1;
+    spt->ref_count = 0;
     spt->grid = NULL; // careful
 
     spt->grid = malloc(spt->total_pixels * sizeof(color_t));
@@ -217,8 +219,7 @@ struct sprite* animate_create_circle(size_t radius, color_t c, bool filled)
     circle->height = diameter;
     circle->width = diameter;
     circle->total_pixels = diameter * diameter;
-    circle->pos.x = -1;
-    circle->pos.y = -1;
+    circle->ref_count = 0;
     circle->grid = NULL; // careful
 
     circle->grid = calloc(diameter * diameter, sizeof(color_t));
@@ -306,8 +307,7 @@ struct sprite* animate_create_rectangle(size_t width, size_t height,
     rect->height = height;
     rect->width = width;
     rect->total_pixels = width * height;
-    rect->pos.x = -1;
-    rect->pos.y = -1;
+    rect->ref_count = 0;
     rect->grid = NULL; // careful
 
     rect->grid = calloc(height * width, sizeof(color_t));
@@ -353,9 +353,9 @@ bool animate_destroy_sprite(struct sprite* sprite)
         return false;
     }
 
-    if (sprite->pos.x != -1 && sprite->pos.y != -1) {
-        DBG_PRINT("Sprite still in use, position (%u,%u)\n",
-            sprite->pos.x, sprite->pos.y);
+    if (sprite->ref_count != 0) {
+        DBG_PRINT("Sprite still in use, %u active placements\n",
+            sprite->ref_count);
         return false;
     }
     free(sprite->grid);

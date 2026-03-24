@@ -5,3 +5,4 @@ https://stackoverflow.com/questions/788903/valid-use-of-goto-for-error-managemen
 https://stackoverflow.com/questions/1269019/what-should-happen-to-the-negation-of-a-size-t-i-e-sizeofstruct-foo#:~:text=3%20Comments&text=Unary%20negation%20of%20unsigned%20quantities,using%20such%20a%20weird%20construct.
 https://stackoverflow.com/questions/12081544/safe-way-to-negate-a-number-of-type-stdsize-t
 https://en.wikipedia.org/wiki/Midpoint_circle_algorithm
+https://en.wikipedia.org/wiki/Skip_list
