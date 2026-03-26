@@ -28,7 +28,7 @@ struct circular_list* canvas_create_circularlist()
 {
     struct circular_list* circlist = malloc(sizeof(*circlist));
     if (!circlist) {
-        DBG_PRINT("Failed to allocate memory for %s\n" "circular list");
+        DBG_PRINT(ERR_MALLOC, "circular list");
         return NULL;
     }
 
@@ -45,7 +45,7 @@ static struct list_node* create_listnode(struct circular_list* circlist,
 {
     struct list_node* listnode = malloc(sizeof(*listnode));
     if (!listnode) {
-        DBG_PRINT("Failed to allocate memory for %s\n" "list node");
+        DBG_PRINT(ERR_MALLOC, "list node");
         return NULL;
     }
 
@@ -59,7 +59,7 @@ static struct list_node* create_listnode(struct circular_list* circlist,
 void canvas_destroy_circularlist(struct circular_list* circlist)
 {
     if (!circlist) {
-        DBG_PRINT("%s is freed\n", "Nothing / NULL");
+        DBG_PRINT(FREED, "Nothing / NULL");
         return;
     }
 
@@ -70,13 +70,13 @@ void canvas_destroy_circularlist(struct circular_list* circlist)
         curr = curr->after;
     }
     free(circlist);
-    DBG_PRINT("%s is freed\n", "Circular list");
+    DBG_PRINT(FREED, "Circular list");
 }
 
 struct sprite_placement* canvas_advance_layer(struct circular_list* circlist)
 {
     if (!circlist || !circlist->size) {
-        DBG_PRINT("Invalid argument %s\n", "circular list");
+        DBG_PRINT(INVALID_ARG, "circlist");
         return NULL;
     }
     struct sprite_placement* ret = circlist->current->data;
@@ -95,11 +95,11 @@ struct list_node* circularlist_insert(struct circular_list* circlist,
     struct sprite_placement* data, PlacementMode mode)
 {
     if (!circlist) {
-        DBG_PRINT("Invalid argument %s\n", "circular list");
+        DBG_PRINT(INVALID_ARG, "circlist");
         return NULL;
     }
     if (!data) {
-        DBG_PRINT("Invalid argument %s\n", "data");
+        DBG_PRINT(INVALID_ARG, "data");
         return NULL;
     }
     if (mode != TOP && mode != BOTTOM) {
@@ -159,11 +159,11 @@ bool circularlist_move(struct circular_list* circlist,
     struct list_node* listnode, PlacementMode mode)
 {
     if (!circlist) {
-        DBG_PRINT("Invalid argument %s\n", "circular list");
+        DBG_PRINT(INVALID_ARG, "circlist");
         return false;
     }
     if (!listnode || listnode->thislist != circlist) {
-        DBG_PRINT("Invalid argument %s\n", "list node");
+        DBG_PRINT(INVALID_ARG, "listnode");
         return false;
     }
 
@@ -208,11 +208,11 @@ bool circularlist_move(struct circular_list* circlist,
 bool circularlist_remove(struct list_node* listnode, struct circular_list* circlist)
 {
     if (!circlist) {
-        DBG_PRINT("Invalid argument %s\n", "circular list");
+        DBG_PRINT(INVALID_ARG, "circlist");
         return NULL;
     }
     if (!listnode || listnode->thislist != circlist) {
-        DBG_PRINT("Invalid argument %s\n", "list node");
+        DBG_PRINT(INVALID_ARG, "listnode");
         return NULL;
     }
 

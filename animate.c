@@ -80,7 +80,7 @@ struct canvas* animate_create_canvas(size_t height, size_t width,
 
     struct canvas* cloth = malloc(sizeof(*cloth));
     if (!cloth) {
-        DBG_PRINT("Failed to allocate memory for %s\n", "canvas");
+        DBG_PRINT(ERR_MALLOC, "canvas");
         return NULL;
     }
     cloth->height = height;
@@ -94,14 +94,14 @@ struct canvas* animate_create_canvas(size_t height, size_t width,
     // just to be sure
     size_t total_pixel = height * width;
     if (total_pixel > (SIZE_MAX / sizeof(color_t))) {
-        DBG_PRINT("Canvas is too big\n%s", "");
+        DBG_PRINT(TOOBIG, "Canvas");
         goto fail_canvas;
     }
 
     cloth->grid = malloc(total_pixel * sizeof(color_t));
     if (!cloth->grid) {
-        DBG_PRINT("Failed to allocate memory for\
-            %s %ux%u\n", "canvas grid", cloth->height, cloth->width);
+        DBG_PRINT(ERR_MALLOC_WSIZE, "canvas grid",
+            cloth->height, cloth->width);
         goto fail_canvas;
     }
 
@@ -123,7 +123,7 @@ struct sprite* animate_create_sprite(const char* file)
     /* GET SPRITE INFO */
     FILE* fp = fopen(file, "rb");
     if (!fp) {
-        DBG_PRINT("Failed to open %s\n", file);
+        DBG_PRINT(ERR_IO, file);
         return NULL;
     }
 
@@ -131,7 +131,7 @@ struct sprite* animate_create_sprite(const char* file)
     struct bitmap_header header_bmp;
     ret = fread(&header_bmp, sizeof(header_bmp), 1, fp);
     if (ret != 1) {
-        DBG_PRINT("Failed to read bitmap header of %s\n", file);
+        DBG_PRINT(ERR_BM_HEADER, file);
         goto fail_header;
     }
 
@@ -140,33 +140,32 @@ struct sprite* animate_create_sprite(const char* file)
     struct bitmapv5_header header_v5;
     ret = fread(&v5_size, sizeof(uint32_t), 1, fp);
     if (ret != 1) {
-        DBG_PRINT("Failed to read header size of %s\n", file);
+        DBG_PRINT(CUSTOM, "Failed to read header size of %s\n", file);
         goto fail_header;
     }
     // verify size
     if (v5_size != 124) {
-        DBG_PRINT("BITMAPV5 size of %s is %u not 124\n", file, v5_size);
+        DBG_PRINT(CUSTOM, "BITMAPV5 size of %s is %u not 124\n", file, v5_size);
         goto fail_header;
     }
     // get all v5 header info
     fseek(fp, -(long)sizeof(uint32_t), SEEK_CUR);
     ret = fread(&header_v5, sizeof(header_v5), 1, fp);
     if (ret != 1) {
-        DBG_PRINT("Failed to read v5 header of %s\n", file);
+        DBG_PRINT(ERR_BM_V5, file);
         goto fail_header;
     }
 
     /* INITIALISE SPRITE */
     struct sprite* spt = malloc(sizeof(*spt));
     if (!spt) {
-        DBG_PRINT("Failed to allocate memory for %s %s\n", "sprite", file);
+        DBG_PRINT(ERR_MALLOC, "sprite");
         return NULL;
     }
     spt->grid = NULL; // careful
     if ((spt->height = header_v5.bV5Height) == 0\
         || (spt->width = header_v5.bV5Width) == 0) {
-        DBG_PRINT("Invalid dimension, H = %d W = %d\n", \
-            header_v5.bV5Height, header_v5.bV5Width);
+        DBG_PRINT(INVALID_DIM, header_v5.bV5Height, header_v5.bV5Width);
         goto fail_sprite;
     }
     spt->height = header_v5.bV5Height;
@@ -176,8 +175,8 @@ struct sprite* animate_create_sprite(const char* file)
 
     spt->grid = malloc(total_pixels * sizeof(color_t));
     if (!spt->grid) {
-        DBG_PRINT("Failed to allocate memory for %s %s %ux%u\n", \
-            "sprite grid", file, spt->height, spt->width);
+        DBG_PRINT(ERR_MALLOC_WSIZE, "sprite grid",
+            spt->height, spt->width);
         goto fail_sprite;
     }
 
@@ -186,7 +185,7 @@ struct sprite* animate_create_sprite(const char* file)
     fseek(fp, header_bmp.pixel_offset, SEEK_SET);
     ret = fread(spt->grid, sizeof(color_t), total_pixels, fp);
     if (ret != total_pixels) {
-        DBG_PRINT("Failed to read pixels of %s\n", file);
+        DBG_PRINT(CUSTOM, "Failed to read pixels of %s\n", file);
         goto fail_sprite;
     }
 
@@ -214,7 +213,7 @@ struct sprite* animate_create_circle(size_t radius, color_t c, bool filled)
     /* INITIALISE SPRITE */
     struct sprite* circle = malloc(sizeof(*circle));
     if (!circle) {
-        DBG_PRINT("Failed to allocate memory for %s\n", "circle sprite");
+        DBG_PRINT(ERR_MALLOC, "circle sprite");
         return NULL;
     }
     circle->height = diameter;
@@ -224,8 +223,7 @@ struct sprite* animate_create_circle(size_t radius, color_t c, bool filled)
 
     circle->grid = calloc(diameter * diameter, sizeof(color_t));
     if (!circle->grid) {
-        DBG_PRINT("Failed to allocate memory for %s radius %zu\n",
-            "circle grid", radius);
+        DBG_PRINT(ERR_MALLOC_WSIZE, "circle grid", radius, radius);
         goto fail_circle;
     }
 
@@ -301,7 +299,7 @@ struct sprite* animate_create_rectangle(size_t width, size_t height,
     /* INITIALISE SPRITE */
     struct sprite* rect = malloc(sizeof(*rect));
     if (!rect) {
-        DBG_PRINT("Failed to allocate memory for %s\n", "rectangle sprite");
+        DBG_PRINT(ERR_MALLOC, "rectangle sprite");
         return NULL;
     }
     rect->height = height;
@@ -311,8 +309,8 @@ struct sprite* animate_create_rectangle(size_t width, size_t height,
 
     rect->grid = calloc(height * width, sizeof(color_t));
     if (!rect->grid) {
-        DBG_PRINT("Failed to allocate memory for %s %ux%u\n",
-            "rectangle grid", rect->height, rect->width);
+        DBG_PRINT(ERR_MALLOC_WSIZE, "rectangle grid",
+            rect->height, rect->width);
         goto fail_rectangle;
     }
 
@@ -348,13 +346,13 @@ fail_rectangle:
 bool animate_destroy_sprite(struct sprite* sprite)
 {
     if (!sprite) {
-        DBG_PRINT("%s is freed\n", "Nothing / NULL");
+        DBG_PRINT(FREED, "Nothing / NULL");
         return false;
     }
 
     free(sprite->grid);
     free(sprite);
-    DBG_PRINT("%s is freed\n", "Sprite");
+    DBG_PRINT(FREED, "Sprite");
     return true;
 }
 
@@ -363,18 +361,18 @@ struct sprite_placement* animate_place_sprite(struct canvas* canvas,
     ssize_t x, ssize_t y)
 {
     if (!canvas) {
-        DBG_PRINT("Invalid argument %s", "canvas");
+        DBG_PRINT(INVALID_ARG, "canvas");
         return NULL;
     }
     if (!sprite) {
-        DBG_PRINT("Invalid argument %s", "sprite");
+        DBG_PRINT(INVALID_ARG, "sprite");
         return NULL;
     }
 
     /* INITIALISE SPRITE PLACEMENT */
     struct sprite_placement* placement = malloc(sizeof(*placement));
     if (!placement) {
-        DBG_PRINT("Failed to allocate memory for %s", "sprite placement");
+        DBG_PRINT(ERR_MALLOC, "sprite placement");
         return NULL;
     }
     placement->x = x;
@@ -423,7 +421,7 @@ void animate_placement_bottom(struct sprite_placement* sprite_placement)
 void animate_destroy_placement(struct sprite_placement* sprite_placement)
 {
     if (!sprite_placement) {
-        DBG_PRINT("Nothing / NULL is freed\n%s", "");
+        DBG_PRINT(FREED, "Nothing / NULL");
         return;
     }
 
@@ -431,7 +429,7 @@ void animate_destroy_placement(struct sprite_placement* sprite_placement)
         listnode_get_thislist(sprite_placement->listnode),
         sprite_placement->listnode);
     free(sprite_placement);
-    DBG_PRINT("%s is freed\n%s", "placement");
+    DBG_PRINT(FREED, "Sprite placement");
 }
 
 void animate_set_animation_params(struct sprite_placement* sprite_placement,
@@ -444,13 +442,13 @@ void animate_set_animation_params(struct sprite_placement* sprite_placement,
 void animate_destroy_canvas(struct canvas* canvas)
 {
     if (!canvas) {
-        DBG_PRINT("Nothing / NULL is freed\n%s", "");
+        DBG_PRINT(FREED, "Nothing / NULL");
         return;
     }
     free(canvas->grid);
     canvas_destroy_circularlist(canvas->layers);
     free(canvas);
-    DBG_PRINT("%s is freed\n%s", "Canvas");
+    DBG_PRINT(FREED, "Canvas");
 }
 
 size_t animate_frame_size_bytes(struct canvas* canvas)
