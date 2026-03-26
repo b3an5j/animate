@@ -1,5 +1,7 @@
 #include "animate.h"
-#include "helper.h"
+#include "canvas_helper.h"
+#include "misc_helper.h"
+#include "pixel_helper.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,23 +9,21 @@
 struct sprite {
     uint32_t height;
     uint32_t width;
-    uint32_t total_pixels;
     color_t* grid;
-    struct sprite_placement pos;
 };
 
 struct sprite_placement {
-    /* -1 is not in use */
-    uint32_t x;
-    uint32_t y;
+    int32_t x;
+    int32_t y;
+    struct sprite* sprite;
+    struct list_node* listnode;
 };
-/* height and width should be int32_t instead */
 
 struct canvas {
     uint32_t height;
     uint32_t width;
-    size_t total_pixels;
     color_t* grid;
+    struct circular_list* layers;
 };
 
 
@@ -83,17 +83,22 @@ struct canvas* animate_create_canvas(size_t height, size_t width,
         DBG_PRINT("Failed to allocate memory for %s\n", "canvas");
         return NULL;
     }
-    cloth->grid = NULL; // careful
     cloth->height = height;
     cloth->width = width;
-    cloth->total_pixels = height * width;
+    cloth->grid = NULL; // careful
+    cloth->layers = canvas_create_circularlist();
+    if (!cloth->layers) {
+        goto fail_canvas;
+    }
+
     // just to be sure
-    if (cloth->total_pixels > (SIZE_MAX / sizeof(color_t))) {
+    size_t total_pixel = height * width;
+    if (total_pixel > (SIZE_MAX / sizeof(color_t))) {
         DBG_PRINT("Canvas is too big\n%s", "");
         goto fail_canvas;
     }
 
-    cloth->grid = malloc(cloth->total_pixels * sizeof(color_t));
+    cloth->grid = malloc(total_pixel * sizeof(color_t));
     if (!cloth->grid) {
         DBG_PRINT("Failed to allocate memory for\
             %s %ux%u\n", "canvas grid", cloth->height, cloth->width);
@@ -101,7 +106,7 @@ struct canvas* animate_create_canvas(size_t height, size_t width,
     }
 
     // color cloth
-    for (size_t i = 0; i < cloth->total_pixels; ++i) {
+    for (size_t i = 0; i < total_pixel; ++i) {
         cloth->grid[i] = background_color;
     }
     return cloth;
@@ -166,12 +171,10 @@ struct sprite* animate_create_sprite(const char* file)
     }
     spt->height = header_v5.bV5Height;
     spt->width = header_v5.bV5Width;
-    spt->total_pixels = header_v5.bV5Height * header_v5.bV5Width;
-    spt->pos.x = -1;
-    spt->pos.y = -1;
+    size_t total_pixels = header_v5.bV5Height * header_v5.bV5Width;
     spt->grid = NULL; // careful
 
-    spt->grid = malloc(spt->total_pixels * sizeof(color_t));
+    spt->grid = malloc(total_pixels * sizeof(color_t));
     if (!spt->grid) {
         DBG_PRINT("Failed to allocate memory for %s %s %ux%u\n", \
             "sprite grid", file, spt->height, spt->width);
@@ -181,8 +184,8 @@ struct sprite* animate_create_sprite(const char* file)
     // no need for mask, assumed ARGB32 little endian
     // no need to account for padding
     fseek(fp, header_bmp.pixel_offset, SEEK_SET);
-    ret = fread(spt->grid, sizeof(color_t), spt->total_pixels, fp);
-    if (ret != spt->total_pixels) {
+    ret = fread(spt->grid, sizeof(color_t), total_pixels, fp);
+    if (ret != total_pixels) {
         DBG_PRINT("Failed to read pixels of %s\n", file);
         goto fail_sprite;
     }
@@ -216,9 +219,7 @@ struct sprite* animate_create_circle(size_t radius, color_t c, bool filled)
     }
     circle->height = diameter;
     circle->width = diameter;
-    circle->total_pixels = diameter * diameter;
-    circle->pos.x = -1;
-    circle->pos.y = -1;
+    size_t total_pixels = diameter * diameter;
     circle->grid = NULL; // careful
 
     circle->grid = calloc(diameter * diameter, sizeof(color_t));
@@ -305,9 +306,7 @@ struct sprite* animate_create_rectangle(size_t width, size_t height,
     }
     rect->height = height;
     rect->width = width;
-    rect->total_pixels = width * height;
-    rect->pos.x = -1;
-    rect->pos.y = -1;
+    size_t total_pixels = width * height;
     rect->grid = NULL; // careful
 
     rect->grid = calloc(height * width, sizeof(color_t));
@@ -321,7 +320,7 @@ struct sprite* animate_create_rectangle(size_t width, size_t height,
     // fill all
     if (filled) {
         color_t* head = rect->grid;
-        for (size_t i = 0; i < rect->total_pixels; ++i) {
+        for (size_t i = 0; i < total_pixels; ++i) {
             head[i] = c;
         }
     }
@@ -353,15 +352,9 @@ bool animate_destroy_sprite(struct sprite* sprite)
         return false;
     }
 
-    if (sprite->pos.x != -1 && sprite->pos.y != -1) {
-        DBG_PRINT("Sprite still in use, position (%u,%u)\n",
-            sprite->pos.x, sprite->pos.y);
-        return false;
-    }
     free(sprite->grid);
     free(sprite);
-    DBG_PRINT("%s %ux%u is freed\n", "Sprite",
-        sprite->height, sprite->width);
+    DBG_PRINT("%s is freed\n", "Sprite");
     return true;
 }
 
@@ -369,33 +362,76 @@ struct sprite_placement* animate_place_sprite(struct canvas* canvas,
     struct sprite* sprite,
     ssize_t x, ssize_t y)
 {
-    // TODO
-    return NULL;
+    if (!canvas) {
+        DBG_PRINT("Invalid argument %s", "canvas");
+        return NULL;
+    }
+    if (!sprite) {
+        DBG_PRINT("Invalid argument %s", "sprite");
+        return NULL;
+    }
+
+    /* INITIALISE SPRITE PLACEMENT */
+    struct sprite_placement* placement = malloc(sizeof(*placement));
+    if (!placement) {
+        DBG_PRINT("Failed to allocate memory for %s", "sprite placement");
+        return NULL;
+    }
+    placement->x = x;
+    placement->y = y;
+    placement->sprite = sprite;
+    placement->listnode = circularlist_insert(canvas->layers, placement, TOP);
+    return placement;
 }
 
 void animate_placement_up(struct sprite_placement* sprite_placement)
 {
-    // TODO COMP9017
+    circularlist_move(
+        listnode_get_thislist(sprite_placement->listnode),
+        sprite_placement->listnode,
+        MOVEUP
+    );
 }
 
 void animate_placement_down(struct sprite_placement* sprite_placement)
 {
-    // TODO COMP9017
+    circularlist_move(
+        listnode_get_thislist(sprite_placement->listnode),
+        sprite_placement->listnode,
+        MOVEDOWN
+    );
 }
 
 void animate_placement_top(struct sprite_placement* sprite_placement)
 {
-    // TODO
+    circularlist_move(
+        listnode_get_thislist(sprite_placement->listnode),
+        sprite_placement->listnode,
+        TOP
+    );
 }
 
 void animate_placement_bottom(struct sprite_placement* sprite_placement)
 {
-    // TODO
+    circularlist_move(
+        listnode_get_thislist(sprite_placement->listnode),
+        sprite_placement->listnode,
+        BOTTOM
+    );
 }
 
 void animate_destroy_placement(struct sprite_placement* sprite_placement)
 {
-    // TODO
+    if (!sprite_placement) {
+        DBG_PRINT("Nothing / NULL is freed\n%s", "");
+        return;
+    }
+
+    circularlist_remove(
+        listnode_get_thislist(sprite_placement->listnode),
+        sprite_placement->listnode);
+    free(sprite_placement);
+    DBG_PRINT("%s is freed\n%s", "placement");
 }
 
 void animate_set_animation_params(struct sprite_placement* sprite_placement,
@@ -407,13 +443,14 @@ void animate_set_animation_params(struct sprite_placement* sprite_placement,
 
 void animate_destroy_canvas(struct canvas* canvas)
 {
-    if (canvas) {
-        free(canvas->grid);
-        free(canvas);
-        DBG_PRINT("Canvas is freed\n%s", "");
+    if (!canvas) {
+        DBG_PRINT("Nothing / NULL is freed\n%s", "");
         return;
     }
-    DBG_PRINT("Nothing / NULL is freed\n%s", "");
+    free(canvas->grid);
+    canvas_destroy_circularlist(canvas->layers);
+    free(canvas);
+    DBG_PRINT("%s is freed\n%s", "Canvas");
 }
 
 size_t animate_frame_size_bytes(struct canvas* canvas)
@@ -433,4 +470,3 @@ void animate_set_animation_function(struct sprite_placement* sprite_placement,
     animate_fn, void* priv)
 {
 }
-
