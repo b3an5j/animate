@@ -1,6 +1,6 @@
 #include "misc_helper.h"
 
-const char* dbg_strings[] = {
+const char* const dbg_strings[] = {
     [ERR_MALLOC] = "Failed to allocate memory for %s.\n",
     [ERR_MALLOC_WSIZE] = "Failed to allocate memory for %s %ux%u.\n",
     [ERR_IO] = "Failed to open %s.\n",
@@ -10,7 +10,7 @@ const char* dbg_strings[] = {
     [INVALID_ARG] = "Invalid argument %s.\n",
     [INVALID_DIM] = "Invalid dimension, H = %zu W = %zu.\n",
     [TOOBIG] = "%s is too big.\n",
-    [CUSTOM] = ""
+    [TOOSMALL] = "%s is too small.\n"
 };
 
 bool validate_dimension(size_t height, size_t width)

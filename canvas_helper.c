@@ -1,15 +1,5 @@
 #include "canvas_helper.h"
 
-union channel {
-    color_t raw;
-    struct {
-        uint8_t A;
-        uint8_t R;
-        uint8_t G;
-        uint8_t B;
-    };
-};
-
 struct circular_list {
     uint32_t size;
     struct list_node* first;

@@ -4,6 +4,10 @@
 #include <stdbool.h>   /* for bool           */
 #include <stdint.h>    /* for uint32_t       */
 #include <sys/types.h> /* for size_t/ssize_t */
+#include "canvas_helper.h"
+#include "misc_helper.h"
+#include "physics_helper.h"
+#include "pixel_helper.h"
 
 /**
  * Abstract data types
@@ -38,7 +42,8 @@ typedef void (*animate_fn)(void* priv, ssize_t* x, ssize_t* y, float t);
 /**
  * @brief Helper function for creating assigning an rgb value to a pixel
  */
-static inline color_t animate_color_rgb(unsigned r, unsigned g, unsigned b) {
+static inline color_t animate_color_rgb(unsigned r, unsigned g, unsigned b)
+{
     return ((r & 0xff) << 16) | ((g & 0xff) << 8) | ((b & 0xff) << 0);
 }
 
@@ -46,7 +51,8 @@ static inline color_t animate_color_rgb(unsigned r, unsigned g, unsigned b) {
  * @brief Helper function for creating assigning an argb value to a pixel
  */
 static inline color_t animate_color_argb(unsigned a,
-                                         unsigned r, unsigned g, unsigned b) {
+    unsigned r, unsigned g, unsigned b)
+{
     return animate_color_rgb(r, g, b) | ((a & 0xff) << 24);
 }
 
@@ -61,7 +67,7 @@ static inline color_t animate_color_argb(unsigned a,
  * function
  */
 struct canvas* animate_create_canvas(size_t height, size_t width,
-                                     color_t background_color);
+    color_t background_color);
 
 /**
  * @brief Clean up a canvas
@@ -96,7 +102,7 @@ struct sprite* animate_create_sprite(const char* file);
  * @return A handle to the created sprite
  */
 struct sprite* animate_create_rectangle(size_t width, size_t height, color_t c,
-                                        bool filled);
+    bool filled);
 
 /**
  * @brief Create a sprite that represents a circle
@@ -137,8 +143,8 @@ bool animate_destroy_sprite(struct sprite* sprite);
  * @return A handle to a sprite placement.
  */
 struct sprite_placement* animate_place_sprite(struct canvas* canvas,
-                                              struct sprite* sprite,
-                                              ssize_t x, ssize_t y);
+    struct sprite* sprite,
+    ssize_t x, ssize_t y);
 
 /**
  * @brief Raise a sprite one level towards the top layer
@@ -187,8 +193,8 @@ void animate_destroy_placement(struct sprite_placement* sprite_placement);
  * @param ay the acceleration in the y direction
  */
 void animate_set_animation_params(struct sprite_placement* sprite_placement,
-                                  ssize_t vx, ssize_t vy,
-                                  ssize_t ax, ssize_t ay);
+    ssize_t vx, ssize_t vy,
+    ssize_t ax, ssize_t ay);
 
 /**
  * @breif [Optional extension] define animation using the provided function
@@ -202,7 +208,7 @@ void animate_set_animation_params(struct sprite_placement* sprite_placement,
  * @param ay the acceleration in the y direction
  */
 void animate_set_animation_function(struct sprite_placement* sprite_placement,
-                                    animate_fn, void* priv);
+    animate_fn, void* priv);
 
 /**
  * @brief Return the size in bytes of an animation frame
@@ -225,8 +231,8 @@ size_t animate_frame_size_bytes(struct canvas* canvas);
  * This buffer will contain the frame data on return.
  */
 void animate_generate_frame(const struct canvas* canvas,
-                            size_t frame, size_t frame_rate,
-                            void* buf);
+    size_t frame, size_t frame_rate,
+    void* buf);
 
 
 #endif /* ANIMATE_H */

@@ -1,0 +1,60 @@
+#include "physics_helper.h"
+
+struct direction {
+    ssize_t velocity;
+    ssize_t acceleration;
+};
+
+struct params {
+    struct direction x;
+    struct direction y;
+};
+
+struct params* physics_set_params(ssize_t initial_x, ssize_t initial_y,
+    ssize_t x_velocity, ssize_t y_velocity,
+    ssize_t x_acceleration, ssize_t y_acceleration)
+{
+    struct params* params = malloc(sizeof(*params));
+    if (!params) {
+        DBG_PRINT(ERR_MALLOC, "params");
+        return NULL;
+    }
+
+    params->x = (struct direction){
+        .velocity = x_velocity,
+        .acceleration = x_acceleration
+    };
+    params->y = (struct direction){
+        .velocity = y_velocity,
+        .acceleration = y_acceleration
+    };
+    return params;
+}
+
+static ssize_t physics_calculate_posdiff(struct direction* dir, double delta_time)
+{
+    double v_diff = (double)dir->velocity * delta_time;
+    double a_diff = 0.5 * (double)dir->acceleration * delta_time * delta_time;
+    double displacement = v_diff + a_diff;
+    // rounding hack
+    displacement = (displacement >= 0) ? displacement + 0.5 : displacement - 0.5;
+    return (ssize_t)displacement;
+}
+
+ssize_t physics_calculate_posx(ssize_t initial_x, struct params* params, double delta_time)
+{
+    return initial_x + physics_calculate_posdiff(&params->x, delta_time);
+}
+
+ssize_t physics_calculate_posy(ssize_t initial_y, struct params* params, double delta_time)
+{
+    return initial_y + physics_calculate_posdiff(&params->y, delta_time);
+}
+
+double physics_get_deltatime(size_t frame, size_t frame_rate)
+{
+    if (frame <= 0) {
+        return 0;
+    }
+    return (double)(frame - 1) / (double)frame_rate;
+}

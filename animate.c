@@ -1,27 +1,22 @@
 #include "animate.h"
-#include "canvas_helper.h"
-#include "misc_helper.h"
-#include "pixel_helper.h"
-
-#include <stdio.h>
-#include <stdlib.h>
 
 struct sprite {
-    uint32_t height;
-    uint32_t width;
+    size_t height;
+    size_t width;
     color_t* grid;
 };
 
 struct sprite_placement {
-    int32_t x;
-    int32_t y;
+    ssize_t initial_x;
+    ssize_t initial_y;
     struct sprite* sprite;
     struct list_node* listnode;
+    struct params* params;
 };
 
 struct canvas {
-    uint32_t height;
-    uint32_t width;
+    size_t height;
+    size_t width;
     color_t* grid;
     struct circular_list* layers;
 };
@@ -180,8 +175,6 @@ struct sprite* animate_create_sprite(const char* file)
         goto fail_sprite;
     }
 
-    // no need for mask, assumed ARGB32 little endian
-    // no need to account for padding
     fseek(fp, header_bmp.pixel_offset, SEEK_SET);
     ret = fread(spt->grid, sizeof(color_t), total_pixels, fp);
     if (ret != total_pixels) {
@@ -239,14 +232,14 @@ struct sprite* animate_create_circle(size_t radius, color_t c, bool filled)
 
     color_t* octant1, * octant2, * octant3, * octant4, * octant5, * octant6, * octant7, * octant8;
     while (x <= y) { // as y decreases, will meet when 45 degrees
-        octant1 = get_pixel_addr(circle->grid, (offset + y), (offset + x), diameter); // octant 1
-        octant2 = get_pixel_addr(circle->grid, (offset + x), (offset + y), diameter); // octant 2
-        octant3 = get_pixel_addr(circle->grid, (offset - x), (offset + y), diameter); // octant 3
-        octant4 = get_pixel_addr(circle->grid, (offset - y), (offset + x), diameter); // octant 4
-        octant5 = get_pixel_addr(circle->grid, (offset - y), (offset - x), diameter); // octant 5
-        octant6 = get_pixel_addr(circle->grid, (offset - x), (offset - y), diameter); // octant 6
-        octant7 = get_pixel_addr(circle->grid, (offset + x), (offset - y), diameter); // octant 7
-        octant8 = get_pixel_addr(circle->grid, (offset + y), (offset - x), diameter); // octant 8
+        octant1 = pixel_get_addr(circle->grid, (offset + y), (offset + x), diameter, diameter); // octant 1
+        octant2 = pixel_get_addr(circle->grid, (offset + x), (offset + y), diameter, diameter); // octant 2
+        octant3 = pixel_get_addr(circle->grid, (offset - x), (offset + y), diameter, diameter); // octant 3
+        octant4 = pixel_get_addr(circle->grid, (offset - y), (offset + x), diameter, diameter); // octant 4
+        octant5 = pixel_get_addr(circle->grid, (offset - y), (offset - x), diameter, diameter); // octant 5
+        octant6 = pixel_get_addr(circle->grid, (offset - x), (offset - y), diameter, diameter); // octant 6
+        octant7 = pixel_get_addr(circle->grid, (offset + x), (offset - y), diameter, diameter); // octant 7
+        octant8 = pixel_get_addr(circle->grid, (offset + y), (offset - x), diameter, diameter); // octant 8
 
         // outline
         *octant1 = *octant2 = *octant3 = *octant4 = *octant5 = *octant6 = *octant7 = *octant8 = c;
@@ -326,13 +319,17 @@ struct sprite* animate_create_rectangle(size_t width, size_t height,
     else {
         // bottom and up
         for (uint32_t x = 0; x < rect->width; ++x) {
-            set_pixel(rect->grid, c, x, 0, rect->width);
-            set_pixel(rect->grid, c, x, rect->height - 1, rect->width);
+            pixel_set_color(rect->grid, c, x, 0,
+                rect->height, rect->width);
+            pixel_set_color(rect->grid, c, x, rect->height - 1,
+                rect->height, rect->width);
         }
         // left and right
         for (uint32_t y = 1; y < rect->height - 1; ++y) {
-            set_pixel(rect->grid, c, 0, y, rect->width);
-            set_pixel(rect->grid, c, rect->width - 1, y, rect->width);
+            pixel_set_color(rect->grid, c, 0, y,
+                rect->height, rect->width);
+            pixel_set_color(rect->grid, c, rect->width - 1, y,
+                rect->height, rect->width);
         }
     }
 
@@ -375,10 +372,11 @@ struct sprite_placement* animate_place_sprite(struct canvas* canvas,
         DBG_PRINT(ERR_MALLOC, "sprite placement");
         return NULL;
     }
-    placement->x = x;
-    placement->y = y;
+    placement->initial_x = x;
+    placement->initial_y = y;
     placement->sprite = sprite;
     placement->listnode = circularlist_insert(canvas->layers, placement, TOP);
+    placement->params = NULL;
     return placement;
 }
 
@@ -436,7 +434,13 @@ void animate_set_animation_params(struct sprite_placement* sprite_placement,
     ssize_t vx, ssize_t vy,
     ssize_t ax, ssize_t ay)
 {
-    // TODO
+    sprite_placement->params = physics_set_params(
+        sprite_placement->initial_x, sprite_placement->initial_y,
+        vx, vy,
+        ax, ay);
+    if (!sprite_placement->params) {
+        return;
+    }
 }
 
 void animate_destroy_canvas(struct canvas* canvas)
@@ -453,14 +457,82 @@ void animate_destroy_canvas(struct canvas* canvas)
 
 size_t animate_frame_size_bytes(struct canvas* canvas)
 {
-    // TODO
-    return 0;
+    return canvas->height * canvas->width * sizeof(color_t);
 }
 
 void animate_generate_frame(const struct canvas* canvas, size_t frame,
     size_t frame_rate, void* buf)
 {
-    // TODO
+    if (sizeof(buf) < sizeof(canvas->grid)) {
+        DBG_PRINT(TOOSMALL, "Buffer");
+        return;
+    }
+
+    /* COLOR BACKGROUND */
+    for (size_t pixel_y = 0; pixel_y < canvas->height; ++pixel_y) {
+        for (size_t pixel_x = 0; pixel_x < canvas->width; ++pixel_x) {
+            pixel_set_color(
+                (color_t*)buf,
+                pixel_get_color(canvas->grid, pixel_x, pixel_y,
+                    canvas->height, canvas->width),
+                pixel_x,
+                pixel_y,
+                canvas->height,
+                canvas->width
+            );
+        }
+    }
+
+    /* COLOR ALL SPRITE PLACEMENTS */
+    circularlist_goto_first(canvas->layers); // reset
+    double deltatime = physics_get_deltatime(frame, frame_rate);
+
+    /* GO THROUGH EVERY LAYER */
+    for (uint32_t i = 0; i < circularlist_get_listsize(canvas->layers); ++i) {
+        struct sprite_placement* layer = canvas_advance_layer(canvas->layers);
+        struct sprite* thesprite = layer->sprite;
+        struct params* params = layer->params;
+        ssize_t posx = physics_calculate_posx(
+            layer->initial_x,
+            params,
+            deltatime
+        );
+        ssize_t posy = physics_calculate_posy(
+            layer->initial_y,
+            params,
+            deltatime
+        );
+
+        /* Y OF SPRITE */
+        for (size_t pixel_y = 0; pixel_y < thesprite->height; ++pixel_y) {
+            ssize_t target_y = pixel_get_positive_coord(
+                posy + (ssize_t)pixel_y,
+                canvas->height
+            );
+
+            /* X OF SPRITE */
+            for (size_t pixel_x = 0; pixel_x < thesprite->width; ++pixel_x) {
+                Channel c = pixel_get_color(thesprite->grid, pixel_x, pixel_y,
+                    thesprite->height, thesprite->width);
+                if (!c.colors.A) { // alpha is 0
+                    continue;
+                }
+
+                ssize_t target_x = pixel_get_positive_coord(
+                    posx + (ssize_t)pixel_x,
+                    canvas->width
+                );
+                pixel_set_color(
+                    (color_t*)buf,
+                    c.raw,
+                    target_x,
+                    target_y,
+                    canvas->height,
+                    canvas->width
+                );
+            }
+        }
+    }
 }
 
 // Optional extension

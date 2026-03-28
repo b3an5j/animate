@@ -1,10 +1,9 @@
 #ifndef MISC_HELPER_H
 #define MISC_HELPER_H
 
-#include "animate.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <sys/types.h>
 
 typedef enum {
     ERR_MALLOC,
@@ -16,10 +15,11 @@ typedef enum {
     INVALID_ARG,
     INVALID_DIM,
     TOOBIG,
+    TOOSMALL,
     CUSTOM
 } ErrorType;
 
-extern const char* dbg_strings[];
+extern const char* const dbg_strings[];
 
 // https://edstem.org/au/courses/31567/discussion/3160179
 #ifdef DEBUG
@@ -27,14 +27,14 @@ extern const char* dbg_strings[];
     fprintf(stderr, "DEBUG: ");\
     if ((code) == CUSTOM) {\
         fprintf(stderr, __VA_ARGS__);\
-        fprintf(stderr, "\n");\
     }\
     else {\
         fprintf(stderr, dbg_strings[code], __VA_ARGS__);\
     }\
+    fprintf(stderr, "\n");\
 } while (0)
 #else
-#define DBG_PRINT(fmt, ...) do {} while(0)
+#define DBG_PRINT(code, ...) do {} while(0)
 #endif
 
 bool validate_dimension(size_t height, size_t width);

@@ -2,14 +2,24 @@
 #define PIXEL_HELPER_H
 
 #include "animate.h"
-#include <stdbool.h>
-#include <stdint.h>
 #include <sys/types.h>
 
-bool validate_dimension(size_t height, size_t width);
+typedef union {
+    color_t raw;
+    struct {
+        uint8_t A;
+        uint8_t R;
+        uint8_t G;
+        uint8_t B;
+    } colors;
+} Channel;
 
-color_t get_pixel(color_t* grid, uint32_t x, uint32_t y, uint32_t width);
-color_t* get_pixel_addr(color_t* grid, uint32_t x, uint32_t y, uint32_t width);
-void set_pixel(color_t* grid, color_t value, uint32_t x, uint32_t y, uint32_t width);
+inline color_t* pixel_get_addr(color_t* grid, ssize_t x, ssize_t y,
+    size_t height, size_t width);
+inline color_t pixel_get_color(color_t* grid, ssize_t x, ssize_t y,
+    size_t height, size_t width);
+inline void pixel_set_color(color_t* grid, color_t value, ssize_t x, ssize_t y,
+    size_t height, size_t width);
+inline ssize_t pixel_get_positive_coord(ssize_t coord, size_t length);
 
 #endif

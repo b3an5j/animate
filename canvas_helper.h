@@ -14,7 +14,6 @@ typedef enum {
     MOVEDOWN
 } PlacementMode;
 
-union channel;
 struct circular_list;
 struct list_node;
 
