@@ -1,16 +1,53 @@
 # You may modify this file as you wish, but `make animate.o` should always
 # compile all necessary code into a single object file.
 
-default: animate.o test_simple
+# SHELL PATH and FILE SUFFIXES used in the compiling process
+SHELL = /bin/sh
+.SUFFIXES:
+.SUFFIXES: .c .o
 
-test_simple: main_simple.c animate.o | animate.h
-	gcc $^ -o $@
+# COMPILER AND COMPILER FLAGS
+CC = gcc
+CFLAGS := -Wall -Werror
 
-animate.o: animate.c | animate.h
-	gcc -fPIC -c $^ -o $@
+# SOURCE FILES, HEADER FILES
+INCDIR = include
+SRCDIR = src
+OBJDIR = obj
+
+VPATH = $(SRCDIR):$(INCDIR):.
+INC = -Iinclude		# let gcc know where to look for .h files included (#include)
+
+HEADERS = $(wildcard $(INCDIR)/*.h)
+SRCFILES = $(wildcard $(SRCDIR)/*.c)
+OTHER_OBJS = $(addprefix $(OBJDIR)/, $(notdir $(SRCFILES:.c=.o)))
+OBJFILES = $(filter-out $(OBJDIR)/animate.o, $(OTHER_OBJS))
+
+# to make it verbose, add VERBOSE=1 to the make command
+ifeq ($(VERBOSE),1)
+Q =
+else
+Q = @
+endif
 
 
+# MAKE RULES
+# left depends on right
+# $@ = The file name of the target of the rule
+# $< = first thing on the right (for .c to .o)
+# $^ = everything on the right (for linking)
 
+default: animate.o test
+
+test: main_simple.c animate.o $(OBJFILES)
+	$(CC) $(CFLAGS) $(INC) $^ -o $@
+
+animate.o: animate.c $(HEADERS)
+	$(CC) $(CFLAGS) $(INC) -fPIC -c $< -o $@
+
+$(OBJDIR)/%.o: %.c $(HEADERS)
+	$(Q)mkdir -p $(OBJDIR)
+	$(CC) $(CFLAGS) $(INC) -c $< -o $@
 
 API_DOC=PointerProAnimateRefman.pdf
 doc: $(API_DOC)
@@ -40,11 +77,13 @@ $(API_DOC): Doxyfile | animate.h
 	cp latex/refman.pdf $@
 
 clean:
-	rm -f animate.o
-	rm -f Doxyfile
-	rm -rf latex
+	$(Q)rm -rf $(OBJDIR)
+	$(Q)rm -f test_simple
+	$(Q)rm -f animate.o
+	$(Q)rm -f Doxyfile
+	$(Q)rm -rf latex
 
 clobber: clean
-	rm -f $(API_DOC)
+	$(Q)rm -f $(API_DOC)
 
-.PHONY: doc clean clobber default
+.PHONY: doc clean clobber default test

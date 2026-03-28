@@ -512,7 +512,8 @@ void animate_generate_frame(const struct canvas* canvas, size_t frame,
 
             /* X OF SPRITE */
             for (size_t pixel_x = 0; pixel_x < thesprite->width; ++pixel_x) {
-                Channel c = pixel_get_color(thesprite->grid, pixel_x, pixel_y,
+                Channel c;
+                c.raw = pixel_get_color(thesprite->grid, pixel_x, pixel_y,
                     thesprite->height, thesprite->width);
                 if (!c.colors.A) { // alpha is 0
                     continue;
