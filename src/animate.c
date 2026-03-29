@@ -182,10 +182,27 @@ struct sprite* animate_create_sprite(const char* file)
     }
 
     fseek(fp, header_bmp.pixel_offset, SEEK_SET);
-    ret = fread(sprite->grid, sizeof(color_t), total_pixels, fp);
-    if (ret != total_pixels) {
-        DBG_PRINT(CUSTOM, "Failed to read pixels of %s\n", file);
-        goto fail_sprite;
+    // flip bitmap
+    for (size_t y = 0; y < sprite->height; ++y) {
+        size_t y_flipped = (sprite->height - 1) - y;
+
+        for (size_t x = 0; x < sprite->width; ++x) {
+            color_t pixel;
+            ret = fread(&pixel, sizeof(color_t), 1, fp);
+            if (ret != 1) {
+                DBG_PRINT(CUSTOM, "Failed to read pixels of %s\n", file);
+                goto fail_sprite;
+            }
+
+            pixel_set_color(
+                sprite->grid,
+                pixel,
+                x,
+                y_flipped,
+                sprite->height,
+                sprite->width
+            );
+        }
     }
 
     fclose(fp);
@@ -206,18 +223,36 @@ fail_sprite:
 
 struct sprite* animate_create_circle(size_t radius, color_t c, bool filled)
 {
-    // assume point is middle of pixel
-    size_t diameter = (2 * radius) - 1;
-    if (!validate_dimension(diameter, diameter)) {
-        return NULL;
-    }
-
     /* INITIALISE SPRITE */
     struct sprite* circle = malloc(sizeof(*circle));
     if (!circle) {
         DBG_PRINT(ERR_MALLOC, "circle sprite");
         return NULL;
     }
+
+    /* SPECIAL CASE */
+    if (!radius) {
+        circle->height = 1;
+        circle->width = 1;
+        circle->grid = NULL; // careful
+
+        circle->grid = malloc(sizeof(color_t));
+        if (!circle->grid) {
+            DBG_PRINT(ERR_MALLOC_WSIZE, "circle grid", diameter, diameter);
+            goto fail_circle;
+        }
+
+        // exit early
+        *(circle->grid) = c;
+        return circle;
+    }
+
+    /* NORMAL CASE */
+    size_t diameter = (2 * radius) - 1;
+    if (!validate_dimension(diameter, diameter)) {
+        goto fail_circle;
+    }
+
     circle->height = diameter;
     circle->width = diameter;
     circle->grid = NULL; // careful
@@ -227,6 +262,7 @@ struct sprite* animate_create_circle(size_t radius, color_t c, bool filled)
         DBG_PRINT(ERR_MALLOC_WSIZE, "circle grid", radius, radius);
         goto fail_circle;
     }
+
 
     /* CALCULATE THE BOUNDARY AND FILL COLOR */
     // assume start from middle, all diameter odd, easier to place
@@ -238,30 +274,27 @@ struct sprite* animate_create_circle(size_t radius, color_t c, bool filled)
     // x = 0, y = radius, initial d is (scaled) 5-4r
     int32_t d = 5 - (4 * radius);
 
-    color_t* octant1, * octant2, * octant3, * octant4, * octant5, * octant6, * octant7, * octant8;
     while (x <= y) { // as y decreases, will meet when 45 degrees
-        octant1 = pixel_get_addr(circle->grid, (offset + y), (offset + x), diameter, diameter); // octant 1
-        octant2 = pixel_get_addr(circle->grid, (offset + x), (offset + y), diameter, diameter); // octant 2
-        octant3 = pixel_get_addr(circle->grid, (offset - x), (offset + y), diameter, diameter); // octant 3
-        octant4 = pixel_get_addr(circle->grid, (offset - y), (offset + x), diameter, diameter); // octant 4
-        octant5 = pixel_get_addr(circle->grid, (offset - y), (offset - x), diameter, diameter); // octant 5
-        octant6 = pixel_get_addr(circle->grid, (offset - x), (offset - y), diameter, diameter); // octant 6
-        octant7 = pixel_get_addr(circle->grid, (offset + x), (offset - y), diameter, diameter); // octant 7
-        octant8 = pixel_get_addr(circle->grid, (offset + y), (offset - x), diameter, diameter); // octant 8
+        // outline only
+        pixel_set_color(circle->grid, c, (offset + y), (offset + x), diameter, diameter); // octant 1
+        pixel_set_color(circle->grid, c, (offset + x), (offset + y), diameter, diameter); // octant 2
+        pixel_set_color(circle->grid, c, (offset - x), (offset + y), diameter, diameter); // octant 3
+        pixel_set_color(circle->grid, c, (offset - y), (offset + x), diameter, diameter); // octant 4
+        pixel_set_color(circle->grid, c, (offset - y), (offset - x), diameter, diameter); // octant 5
+        pixel_set_color(circle->grid, c, (offset - x), (offset - y), diameter, diameter); // octant 6
+        pixel_set_color(circle->grid, c, (offset + x), (offset - y), diameter, diameter); // octant 7
+        pixel_set_color(circle->grid, c, (offset + y), (offset - x), diameter, diameter); // octant 8
 
-        // outline
-        *octant1 = *octant2 = *octant3 = *octant4 = *octant5 = *octant6 = *octant7 = *octant8 = c;
-        // fill left to right, right to left
+        // fill left to right
         if (filled) {
-            color_t* head;
-            head = octant3 + 1; // 3 with 2
-            while (head < octant2) { *(head++) = c; }
-            head = octant4 + 1; // 4 with 1
-            while (head < octant1) { *(head++) = c; }
-            head = octant5 + 1; // 5 with 8
-            while (head < octant8) { *(head++) = c; }
-            head = octant6 + 1;// 6 with 7
-            while (head < octant7) { *(head++) = c; }
+            for (int32_t head = (offset - x) + 1; head < (offset + x); ++head) {
+                pixel_set_color(circle->grid, c, head, offset + y, diameter, diameter);
+                pixel_set_color(circle->grid, c, head, offset - y, diameter, diameter);
+            }
+            for (int32_t head = (offset - y) + 1; head < (offset + y); ++head) {
+                pixel_set_color(circle->grid, c, head, offset + x, diameter, diameter);
+                pixel_set_color(circle->grid, c, head, offset - x, diameter, diameter);
+            }
         }
 
         // d_step = d_next - d
@@ -360,9 +393,10 @@ bool animate_destroy_sprite(struct sprite* sprite)
     }
 
     free(sprite->grid);
+    sprite->grid = NULL; // careful
     free(sprite);
     DBG_PRINT(FREED, "Sprite");
-    return true;
+    return false;
 }
 
 struct sprite_placement* animate_place_sprite(struct canvas* canvas,
@@ -517,26 +551,24 @@ void animate_generate_frame(const struct canvas* canvas, size_t frame,
 
         /* Y OF SPRITE */
         for (size_t pixel_y = 0; pixel_y < thesprite->height; ++pixel_y) {
-            ssize_t target_y = pixel_get_positive_coord(
-                posy + (ssize_t)pixel_y,
-                canvas->height
-            );
-            // flip, start from bottom
-            target_y = (canvas->height - 1) - target_y;
+            ssize_t target_y = posy + (ssize_t)pixel_y;
 
             /* X OF SPRITE */
             for (size_t pixel_x = 0; pixel_x < thesprite->width; ++pixel_x) {
+                ssize_t target_x = posx + (ssize_t)pixel_x;
+
+                // out of bounds
+                if (target_x < 0 || target_x >= (ssize_t)canvas->width ||
+                    target_y < 0 || target_y >= (ssize_t)canvas->height) {
+                    continue;
+                }
+
                 Channel c;
                 c.raw = pixel_get_color(thesprite->grid, pixel_x, pixel_y,
                     thesprite->height, thesprite->width);
                 if (!c.colors.A) { // alpha is 0
                     continue;
                 }
-
-                ssize_t target_x = pixel_get_positive_coord(
-                    posx + (ssize_t)pixel_x,
-                    canvas->width
-                );
 
                 pixel_set_color(
                     (color_t*)buf,

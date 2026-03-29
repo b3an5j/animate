@@ -31,7 +31,9 @@ static inline void pixel_set_color(color_t* grid, color_t value, ssize_t x, ssiz
     size_t height, size_t width)
 {
     /* set A channel to xFF if not 0 */
-    value |= 0xFF << 24;
+    if (value & 0xFF000000) {
+        value |= 0xFF << 24;
+    }
     *pixel_get_addr(grid, x, y, height, width) = value;
 }
 

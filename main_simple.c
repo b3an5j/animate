@@ -18,8 +18,9 @@ void output_frames(struct canvas* canvas, size_t n_frames, size_t frame_rate);
 
 int main(int argc, char** argv)
 {
-    struct canvas* canvas = animate_create_canvas(600, 800, animate_color_argb(255, 100, 200, 255));
+    struct canvas* canvas = animate_create_canvas(600, 800, animate_color_argb(255, 255, 255, 255));
     struct sprite* rect = animate_create_rectangle(50, 50, animate_color_argb(255, 255, 255, 0), 1);
+    struct sprite* circ = animate_create_circle(80, animate_color_argb(1, 0, 255, 0), 0);
 
     struct sprite* rick = animate_create_sprite("imgs/rick.bmp");
     struct sprite* crosshair = animate_create_sprite("imgs/crosshair.bmp");
@@ -28,9 +29,11 @@ int main(int argc, char** argv)
     struct sprite_placement* prect2 = animate_place_sprite(canvas, rect, 0, 0);
     struct sprite_placement* prick1 = animate_place_sprite(canvas, rick, 0, 0);
     struct sprite_placement* prick2 = animate_place_sprite(canvas, rick, 400, 400);
+    struct sprite_placement* pcirc = animate_place_sprite(canvas, circ, 0, 0);
     struct sprite_placement* pch = animate_place_sprite(canvas, crosshair, 0, 0);
-    if (!prect1 || !prect2 || !prick1 || !prick2 || !pch) {
+    if (!prect1 || !prect2 || !prick1 || !prick2 || !pcirc || !pch) {
         printf("FAILED\n");
+        return 1;
     }
 
     /* TEST LAYERING */
@@ -60,6 +63,7 @@ int main(int argc, char** argv)
     animate_set_animation_params(prect2, -100, -200, 0, 100);
     animate_set_animation_params(prick1, 100, 80, 0, 0);
     animate_set_animation_params(prick2, -50, -10, -200, 0);
+    animate_set_animation_params(pcirc, -30, -30, 20, 20);
     animate_set_animation_params(pch, 30, 30, 20, 20);
     output_frames(canvas, 300, 60);
 
@@ -70,6 +74,7 @@ int main(int argc, char** argv)
     animate_destroy_sprite(rect);
     animate_destroy_sprite(rick);
     animate_destroy_sprite(crosshair);
+    animate_destroy_sprite(circ);
 
     return 0;
 }
