@@ -10,12 +10,15 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 
 #define OUTPUT_FILE "imgs/simple.dat"
 
+void output_frames(struct canvas* canvas, size_t n_frames, size_t frame_rate);
+
 int main(int argc, char** argv)
 {
-    struct canvas* canvas = animate_create_canvas(600, 800, animate_color_argb(255, 255, 255, 255));
+    struct canvas* canvas = animate_create_canvas(600, 800, animate_color_argb(255, 100, 200, 255));
     struct sprite* rect = animate_create_rectangle(50, 50, animate_color_argb(255, 255, 255, 0), 1);
 
     struct sprite* rick = animate_create_sprite("imgs/rick.bmp");
@@ -24,10 +27,15 @@ int main(int argc, char** argv)
     struct sprite_placement* prect1 = animate_place_sprite(canvas, rect, 100, 100);
     struct sprite_placement* prect2 = animate_place_sprite(canvas, rect, 0, 0);
     struct sprite_placement* prick1 = animate_place_sprite(canvas, rick, 0, 0);
-    struct sprite_placement* pch1 = animate_place_sprite(canvas, crosshair, 0, 0);
-    if (!prect1 || !prect2 || !prick1 || !pch1) {
+    struct sprite_placement* prick2 = animate_place_sprite(canvas, rick, 400, 400);
+    struct sprite_placement* pch = animate_place_sprite(canvas, crosshair, 0, 0);
+    if (!prect1 || !prect2 || !prick1 || !prick2 || !pch) {
         printf("FAILED\n");
     }
+
+    /* TEST LAYERING */
+    animate_placement_bottom(prick1);
+    animate_placement_bottom(prick2);
     animate_placement_top(prect1);
 
     size_t frame_size_bytes = animate_frame_size_bytes(canvas);
@@ -47,6 +55,14 @@ int main(int argc, char** argv)
         return -1;
     }
 
+    /* TEST PHYSICS */
+    animate_set_animation_params(prect1, 100, 200, 0, -100);
+    animate_set_animation_params(prect2, -100, -200, 0, 100);
+    animate_set_animation_params(prick1, 100, 80, 0, 0);
+    animate_set_animation_params(prick2, -50, -10, -200, 0);
+    animate_set_animation_params(pch, 30, 30, 20, 20);
+    output_frames(canvas, 300, 60);
+
     fclose(fp);
     free(data);
 
@@ -58,3 +74,36 @@ int main(int argc, char** argv)
     return 0;
 }
 
+void output_frames(struct canvas* canvas, size_t n_frames, size_t frame_rate)
+{
+    static const char* const prefix = "frames/frame%06zu.raw";
+    char filename[64];
+    mkdir("frames/", 0777);
+
+    size_t frame_size_bytes = animate_frame_size_bytes(canvas);
+    void* data = malloc(frame_size_bytes);
+    if (!data) { return; }
+
+    for (size_t frame = 0; frame < n_frames; ++frame) {
+        snprintf(filename, 64, prefix, frame);
+        animate_generate_frame(canvas, frame, frame_rate, data);
+
+        FILE* fp = fopen(filename, "wb");
+        if (fp == NULL) {
+            perror("Failed to generate file\n");
+            goto clean_data;
+        }
+        size_t bytes_written = fwrite(data, 1, frame_size_bytes, fp);
+        fclose(fp);
+
+        if (bytes_written != frame_size_bytes) {
+            printf("Failed to write buffer (%zu/%zu): %s\n", bytes_written,
+                frame_size_bytes, strerror(errno));
+            goto clean_data;
+            return;
+        }
+    }
+
+clean_data:
+    free(data);
+}

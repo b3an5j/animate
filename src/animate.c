@@ -444,6 +444,7 @@ void animate_destroy_placement(struct sprite_placement* sprite_placement)
         sprite_placement->listnode,
         listnode_get_thislist(sprite_placement->listnode)
     );
+    free(sprite_placement);
     DBG_PRINT(FREED, "Sprite placement");
 }
 

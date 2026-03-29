@@ -77,5 +77,5 @@ double physics_get_deltatime(size_t frame, size_t frame_rate)
     if (frame <= 0) {
         return 0;
     }
-    return (double)(frame - 1) / (double)frame_rate;
+    return (double)frame / (double)frame_rate;
 }

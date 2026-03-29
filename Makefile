@@ -6,13 +6,11 @@ SHELL = /bin/sh
 .SUFFIXES:
 .SUFFIXES: .c .o
 
+MAKEFLAGS += --no-print-directory
+
 # COMPILER AND COMPILER FLAGS
 CC = gcc
-CFLAGS := -Wall -Werror -fsanitize=address
-DEBUG ?= 0
-ifeq ($(DEBUG), 1)
-	CFLAGS += -DDEBUG -g
-endif
+CFLAGS := -Wall -Werror
 
 # SOURCE FILES, HEADER FILES
 INCDIR = include
@@ -43,18 +41,26 @@ endif
 
 default: animate.o test
 
+$(OBJDIR)/%.o: %.c $(HEADERS) animate.h
+	$(Q)mkdir -p $(OBJDIR)
+	$(Q)$(CC) $(CFLAGS) $(INC) -fPIC -c $< -o $@
+
 test: $(OBJDIR)/main_simple.o animate.o
 	$(Q)$(CC) $(CFLAGS) $(INC) $^ -o $@
+
+test_asan:
+	$(Q)$(MAKE) clean_obj
+	$(Q)$(MAKE) test CFLAGS="$(CFLAGS) -fsanitize=address -g"
+
+test_debug:
+	$(Q)$(MAKE) clean_obj
+	$(Q)$(MAKE) test CFLAGS="$(CFLAGS) -g"
 
 animate.o: $(OBJDIR)/animate.o $(OBJFILES)
 	$(Q)$(CC) $(CFLAGS) -nostdlib -r $^ -o $@
 # use gcc -r instead
 # nostdlib avoid stdlib yet, prob ed has
 # we want the linking, not just compile only
-
-$(OBJDIR)/%.o: %.c $(HEADERS) animate.h
-	$(Q)mkdir -p $(OBJDIR)
-	$(Q)$(CC) $(CFLAGS) $(INC) -fPIC -c $< -o $@
 
 API_DOC=PointerProAnimateRefman.pdf
 doc: $(API_DOC)
@@ -83,9 +89,13 @@ $(API_DOC): Doxyfile | animate.h
 	cd latex && make
 	cp latex/refman.pdf $@
 
+clean_obj:
+	$(Q)rm -rf $(OBJDIR)
+
 clean:
 	$(Q)rm -rf $(OBJDIR)
-	$(Q)rm -f test_simple
+	$(Q)rm -rf frames
+	$(Q)rm -f test
 	$(Q)rm -f animate.o
 	$(Q)rm -f Doxyfile
 	$(Q)rm -rf latex
@@ -93,4 +103,4 @@ clean:
 clobber: clean
 	$(Q)rm -f $(API_DOC)
 
-.PHONY: doc clean clobber default test
+.PHONY: doc clean clean_obj clobber default test test_debug test_sanitise debug
