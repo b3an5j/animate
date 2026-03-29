@@ -110,6 +110,7 @@ struct list_node* circularlist_insert(struct circular_list* circlist,
 
     // empty list
     if (!circlist->size) {
+        circlist->first = new;
         circlist->last = new;
         circlist->current = new;
         new->after = new;
@@ -125,10 +126,10 @@ struct list_node* circularlist_insert(struct circular_list* circlist,
     }
 
     if (mode == TOP) {
-        circlist->first = new;
+        circlist->last = new;
     }
     else {
-        circlist->last = new;
+        circlist->first = new;
     }
     ++circlist->size;
     return new;
@@ -169,12 +170,12 @@ bool circularlist_move(struct circular_list* circlist,
     }
     /* ONLY 2 NODES */
     else if (circlist->size == 2) {
-        if (mode == TOP && listnode == circlist->last) {
+        if (mode == TOP && listnode == circlist->first) {
             struct list_node* temp = circlist->first;
             circlist->first = circlist->last;
             circlist->last = temp;
         }
-        else if (mode == BOTTOM && listnode == circlist->first) {
+        else if (mode == BOTTOM && listnode == circlist->last) {
             struct list_node* temp = circlist->first;
             circlist->first = circlist->last;
             circlist->last = temp;
@@ -182,16 +183,30 @@ bool circularlist_move(struct circular_list* circlist,
     }
     /* MULTIPLE NODES */
     else {
+        // repair hole in advance
+        if (listnode == circlist->first) {
+            circlist->first = listnode->after;
+        }
+        if (listnode == circlist->last) {
+            circlist->last = listnode->before;
+        }
+
         listnode_unlink(listnode);
+        listnode_insert_between(
+            circlist->last,
+            circlist->first,
+            listnode
+        );
+
         switch (mode) {
         case TOP:
-            listnode_insert_between(circlist->last, circlist->first, listnode);
-            circlist->first = listnode;
+            circlist->last = listnode;
+            circlist->first = listnode->after;
             break;
 
         case BOTTOM:
-            listnode_insert_between(circlist->last, circlist->first, listnode);
-            circlist->last = listnode;
+            circlist->first = listnode;
+            circlist->last = listnode->before;
             break;
 
         default:
@@ -232,6 +247,7 @@ bool circularlist_remove(struct list_node* listnode, struct circular_list* circl
     listnode_unlink(listnode);
 
     free(listnode);
+    DBG_PRINT(FREED, "List node");
     --circlist->size;
     DBG_PRINT(CUSTOM, "Removed list node from circular list.");
     return true;

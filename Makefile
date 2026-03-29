@@ -20,7 +20,7 @@ SRCDIR = src
 OBJDIR = obj
 
 VPATH = $(SRCDIR):$(INCDIR):.
-INC = -Iinclude		# let gcc know where to look for .h files included (#include)
+INC = -Iinclude	-I.	# let gcc know where to look for .h files included (#include)
 
 HEADERS = $(wildcard $(INCDIR)/*.h)
 SRCFILES = $(wildcard $(SRCDIR)/*.c) main_simple.c
@@ -46,10 +46,13 @@ default: animate.o test
 test: $(OBJDIR)/main_simple.o animate.o
 	$(Q)$(CC) $(CFLAGS) $(INC) $^ -o $@
 
+test_asan: $(OBJDIR)/main_simple.o animate.o
+	$(Q)$(CC) $(CFLAGS) -fsanitize=address $(INC) $^ -o $@
+
 animate.o: $(OBJDIR)/animate.o $(OBJFILES)
 	$(Q)ld -r $^ -o $@
 
-$(OBJDIR)/%.o: %.c $(HEADERS)
+$(OBJDIR)/%.o: %.c $(HEADERS) animate.h
 	$(Q)mkdir -p $(OBJDIR)
 	$(Q)$(CC) $(CFLAGS) $(INC) -fPIC -c $< -o $@
 

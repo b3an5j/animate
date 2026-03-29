@@ -15,14 +15,20 @@
 
 int main(int argc, char** argv)
 {
-    struct canvas* canvas = animate_create_canvas(50, 50, animate_color_argb(255, 255, 255, 255));
-    struct sprite* rect = animate_create_rectangle(10, 10, animate_color_argb(100, 255, 255, 0), 1);
+    struct canvas* canvas = animate_create_canvas(600, 800, animate_color_argb(255, 255, 255, 255));
+    struct sprite* rect = animate_create_rectangle(50, 50, animate_color_argb(255, 255, 255, 0), 1);
 
-    struct sprite_placement* prect1 = animate_place_sprite(canvas, rect, 0, 0);
-    struct sprite_placement* prect2 = animate_place_sprite(canvas, rect, 20, 20);
-    if (!prect1 || !prect2) {
+    struct sprite* rick = animate_create_sprite("imgs/rick.bmp");
+    struct sprite* crosshair = animate_create_sprite("imgs/crosshair.bmp");
+
+    struct sprite_placement* prect1 = animate_place_sprite(canvas, rect, 100, 100);
+    struct sprite_placement* prect2 = animate_place_sprite(canvas, rect, 0, 0);
+    struct sprite_placement* prick1 = animate_place_sprite(canvas, rick, 0, 0);
+    struct sprite_placement* pch1 = animate_place_sprite(canvas, crosshair, 0, 0);
+    if (!prect1 || !prect2 || !prick1 || !pch1) {
         printf("FAILED\n");
     }
+    animate_placement_top(prect1);
 
     size_t frame_size_bytes = animate_frame_size_bytes(canvas);
     void* data = malloc(frame_size_bytes);
@@ -46,6 +52,8 @@ int main(int argc, char** argv)
 
     animate_destroy_canvas(canvas);
     animate_destroy_sprite(rect);
+    animate_destroy_sprite(rick);
+    animate_destroy_sprite(crosshair);
 
     return 0;
 }

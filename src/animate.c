@@ -435,11 +435,11 @@ void animate_destroy_placement(struct sprite_placement* sprite_placement)
         return;
     }
 
+    physics_destroy_params(sprite_placement->params);
     circularlist_remove(
         sprite_placement->listnode,
         listnode_get_thislist(sprite_placement->listnode)
     );
-    free(sprite_placement);
     DBG_PRINT(FREED, "Sprite placement");
 }
 
@@ -461,8 +461,8 @@ void animate_destroy_canvas(struct canvas* canvas)
         DBG_PRINT(FREED, "Nothing / NULL");
         return;
     }
-    free(canvas->grid);
     canvas_destroy_circularlist(canvas->layers);
+    free(canvas->grid);
     free(canvas);
     DBG_PRINT(FREED, "Canvas");
 }
@@ -516,6 +516,8 @@ void animate_generate_frame(const struct canvas* canvas, size_t frame,
                 posy + (ssize_t)pixel_y,
                 canvas->height
             );
+            // flip, start from bottom
+            target_y = (canvas->height - 1) - target_y;
 
             /* X OF SPRITE */
             for (size_t pixel_x = 0; pixel_x < thesprite->width; ++pixel_x) {

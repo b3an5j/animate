@@ -29,6 +29,11 @@ struct params* physics_create_params()
     return params;
 }
 
+void physics_destroy_params(struct params* params)
+{
+    free(params);
+}
+
 void physics_set_params(
     struct params* params,
     ssize_t initial_x, ssize_t initial_y,
