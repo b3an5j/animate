@@ -34,11 +34,6 @@ typedef uint32_t color_t;
  */
 typedef void (*animate_fn)(void* priv, ssize_t* x, ssize_t* y, float t);
 
-#include "canvas_helper.h"
-#include "misc_helper.h"
-#include "physics_helper.h"
-#include "pixel_helper.h"
-
 // Inline functions are often preferred over macros as types will be checked
 /**
  * @brief Helper function for creating assigning an rgb value to a pixel

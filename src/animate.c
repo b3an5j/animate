@@ -1,4 +1,8 @@
 #include "animate.h"
+#include "canvas_helper.h"
+#include "misc_helper.h"
+#include "physics_helper.h"
+#include "pixel_helper.h"
 
 struct sprite {
     size_t height;
