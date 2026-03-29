@@ -9,6 +9,10 @@ SHELL = /bin/sh
 # COMPILER AND COMPILER FLAGS
 CC = gcc
 CFLAGS := -Wall -Werror
+DEBUG ?= 0
+ifeq ($(DEBUG), 1)
+	CFLAGS += -DDEBUG -g
+endif
 
 # SOURCE FILES, HEADER FILES
 INCDIR = include
@@ -19,9 +23,9 @@ VPATH = $(SRCDIR):$(INCDIR):.
 INC = -Iinclude		# let gcc know where to look for .h files included (#include)
 
 HEADERS = $(wildcard $(INCDIR)/*.h)
-SRCFILES = $(wildcard $(SRCDIR)/*.c)
+SRCFILES = $(wildcard $(SRCDIR)/*.c) main_simple.c
 OTHER_OBJS = $(addprefix $(OBJDIR)/, $(notdir $(SRCFILES:.c=.o)))
-OBJFILES = $(filter-out $(OBJDIR)/animate.o, $(OTHER_OBJS))
+OBJFILES = $(filter-out $(OBJDIR)/animate.o $(OBJDIR)/main_simple.o, $(OTHER_OBJS))
 
 # to make it verbose, add VERBOSE=1 to the make command
 ifeq ($(VERBOSE),1)
@@ -39,15 +43,15 @@ endif
 
 default: animate.o test
 
-test: main_simple.c animate.o $(OBJFILES)
-	$(CC) $(CFLAGS) $(INC) $^ -o $@
+test: $(OBJDIR)/main_simple.o animate.o
+	$(Q)$(CC) $(CFLAGS) $(INC) $^ -o $@
 
-animate.o: animate.c $(HEADERS)
-	$(CC) $(CFLAGS) $(INC) -fPIC -c $< -o $@
+animate.o: $(OBJDIR)/animate.o $(OBJFILES)
+	$(Q)ld -r $^ -o $@
 
 $(OBJDIR)/%.o: %.c $(HEADERS)
 	$(Q)mkdir -p $(OBJDIR)
-	$(CC) $(CFLAGS) $(INC) -c $< -o $@
+	$(Q)$(CC) $(CFLAGS) $(INC) -fPIC -c $< -o $@
 
 API_DOC=PointerProAnimateRefman.pdf
 doc: $(API_DOC)

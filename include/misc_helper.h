@@ -15,7 +15,8 @@ typedef enum {
     INVALID_ARG,
     INVALID_DIM,
     TOOBIG,
-    TOOSMALL,
+    FAIL,
+    SUCCESS,
     CUSTOM
 } ErrorType;
 
@@ -23,16 +24,9 @@ extern const char* const dbg_strings[];
 
 // https://edstem.org/au/courses/31567/discussion/3160179
 #ifdef DEBUG
-#define DBG_PRINT(code, ...) do {\
-    fprintf(stderr, "DEBUG: ");\
-    if ((code) == CUSTOM) {\
-        fprintf(stderr, __VA_ARGS__);\
-    }\
-    else {\
-        fprintf(stderr, dbg_strings[code], __VA_ARGS__);\
-    }\
-    fprintf(stderr, "\n");\
-} while (0)
+#include <stdarg.h>
+void dbg_print_helper(ErrorType code, ...);
+#define DBG_PRINT(code, ...) dbg_print_helper(code, __VA_ARGS__)
 #else
 #define DBG_PRINT(code, ...) do {} while(0)
 #endif

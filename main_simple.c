@@ -11,14 +11,18 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define OUTPUT_FILE "simple.dat"
+#define OUTPUT_FILE "imgs/simple.dat"
 
-int main(int argc, char** argv) {
-    struct canvas* canvas = animate_create_canvas(10, 10, animate_color_argb(0, 0, 0, 0));
-    struct sprite* rect = animate_create_rectangle(3, 6, animate_color_argb(0,255,255,0), 1);
+int main(int argc, char** argv)
+{
+    struct canvas* canvas = animate_create_canvas(50, 50, animate_color_argb(255, 255, 255, 255));
+    struct sprite* rect = animate_create_rectangle(10, 10, animate_color_argb(100, 255, 255, 0), 1);
 
     struct sprite_placement* prect1 = animate_place_sprite(canvas, rect, 0, 0);
-    struct sprite_placement* prect2 = animate_place_sprite(canvas, rect, 2, 1);
+    struct sprite_placement* prect2 = animate_place_sprite(canvas, rect, 20, 20);
+    if (!prect1 || !prect2) {
+        printf("FAILED\n");
+    }
 
     size_t frame_size_bytes = animate_frame_size_bytes(canvas);
     void* data = malloc(frame_size_bytes);
@@ -33,7 +37,7 @@ int main(int argc, char** argv) {
     size_t bytes_written = fwrite(data, 1, frame_size_bytes, fp);
     if (bytes_written != frame_size_bytes) {
         printf("Failed to write buffer (%ld/%ld): %s\n", bytes_written,
-               frame_size_bytes, strerror(errno));
+            frame_size_bytes, strerror(errno));
         return -1;
     }
 

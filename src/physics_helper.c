@@ -10,16 +10,31 @@ struct params {
     struct direction y;
 };
 
-struct params* physics_set_params(ssize_t initial_x, ssize_t initial_y,
-    ssize_t x_velocity, ssize_t y_velocity,
-    ssize_t x_acceleration, ssize_t y_acceleration)
+struct params* physics_create_params()
 {
     struct params* params = malloc(sizeof(*params));
     if (!params) {
         DBG_PRINT(ERR_MALLOC, "params");
+        DBG_PRINT(FAIL, "Create params");
         return NULL;
     }
 
+    physics_set_params(
+        params,
+        0, 0,
+        0, 0,
+        0, 0
+    );
+    DBG_PRINT(SUCCESS, "Create params");
+    return params;
+}
+
+void physics_set_params(
+    struct params* params,
+    ssize_t initial_x, ssize_t initial_y,
+    ssize_t x_velocity, ssize_t y_velocity,
+    ssize_t x_acceleration, ssize_t y_acceleration)
+{
     params->x = (struct direction){
         .velocity = x_velocity,
         .acceleration = x_acceleration
@@ -28,13 +43,14 @@ struct params* physics_set_params(ssize_t initial_x, ssize_t initial_y,
         .velocity = y_velocity,
         .acceleration = y_acceleration
     };
-    return params;
 }
 
 static ssize_t physics_calculate_posdiff(struct direction* dir, double delta_time)
 {
-    double v_diff = (double)dir->velocity * delta_time;
-    double a_diff = 0.5 * (double)dir->acceleration * delta_time * delta_time;
+    double v_diff = (dir->velocity) ? (double)dir->velocity * delta_time : 0;
+    double a_diff = (dir->acceleration) ?
+        0.5 * (double)dir->acceleration * delta_time * delta_time :
+        0;
     double displacement = v_diff + a_diff;
     // rounding hack
     displacement = (displacement >= 0) ? displacement + 0.5 : displacement - 0.5;

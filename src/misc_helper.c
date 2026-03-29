@@ -10,8 +10,27 @@ const char* const dbg_strings[] = {
     [INVALID_ARG] = "Invalid argument %s.\n",
     [INVALID_DIM] = "Invalid dimension, H = %zu W = %zu.\n",
     [TOOBIG] = "%s is too big.\n",
-    [TOOSMALL] = "%s is too small.\n"
+    [FAIL] = "%s is not successful.\n",
+    [SUCCESS] = "%s is successful.\n"
 };
+
+#ifdef DEBUG
+void dbg_print_helper(ErrorType code, ...)
+{
+    va_list args;
+    va_start(args, code);
+
+    fprintf(stderr, "[DEBUG] ");
+    if ((code) == CUSTOM) {
+        const char* str = va_arg(args, const char*);
+        vfprintf(stderr, str, args);
+        fprintf(stderr, "\n");
+    }
+    else {
+        vfprintf(stderr, dbg_strings[code], args);
+    }
+}
+#endif
 
 bool validate_dimension(size_t height, size_t width)
 {

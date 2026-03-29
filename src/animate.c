@@ -104,9 +104,11 @@ struct canvas* animate_create_canvas(size_t height, size_t width,
     for (size_t i = 0; i < total_pixel; ++i) {
         cloth->grid[i] = background_color;
     }
+    DBG_PRINT(SUCCESS, "Create canvas");
     return cloth;
 
 fail_canvas:
+    DBG_PRINT(FAIL, "Create canvas");
     animate_destroy_canvas(cloth);
     return NULL;
 }
@@ -152,46 +154,49 @@ struct sprite* animate_create_sprite(const char* file)
     }
 
     /* INITIALISE SPRITE */
-    struct sprite* spt = malloc(sizeof(*spt));
-    if (!spt) {
+    struct sprite* sprite = malloc(sizeof(*sprite));
+    if (!sprite) {
         DBG_PRINT(ERR_MALLOC, "sprite");
         return NULL;
     }
-    spt->grid = NULL; // careful
-    if ((spt->height = header_v5.bV5Height) == 0\
-        || (spt->width = header_v5.bV5Width) == 0) {
+    sprite->grid = NULL; // careful
+    if ((sprite->height = header_v5.bV5Height) == 0\
+        || (sprite->width = header_v5.bV5Width) == 0) {
         DBG_PRINT(INVALID_DIM, header_v5.bV5Height, header_v5.bV5Width);
         goto fail_sprite;
     }
-    spt->height = header_v5.bV5Height;
-    spt->width = header_v5.bV5Width;
+    sprite->height = header_v5.bV5Height;
+    sprite->width = header_v5.bV5Width;
     size_t total_pixels = header_v5.bV5Height * header_v5.bV5Width;
-    spt->grid = NULL; // careful
+    sprite->grid = NULL; // careful
 
-    spt->grid = malloc(total_pixels * sizeof(color_t));
-    if (!spt->grid) {
+    sprite->grid = malloc(total_pixels * sizeof(color_t));
+    if (!sprite->grid) {
         DBG_PRINT(ERR_MALLOC_WSIZE, "sprite grid",
-            spt->height, spt->width);
+            sprite->height, sprite->width);
         goto fail_sprite;
     }
 
     fseek(fp, header_bmp.pixel_offset, SEEK_SET);
-    ret = fread(spt->grid, sizeof(color_t), total_pixels, fp);
+    ret = fread(sprite->grid, sizeof(color_t), total_pixels, fp);
     if (ret != total_pixels) {
         DBG_PRINT(CUSTOM, "Failed to read pixels of %s\n", file);
         goto fail_sprite;
     }
 
     fclose(fp);
-    return spt;
+    DBG_PRINT(SUCCESS, "Create sprite");
+    return sprite;
 
 fail_header:
     fclose(fp);
+    DBG_PRINT(FAIL, "Create sprite");
     return NULL;
 
 fail_sprite:
-    animate_destroy_sprite(spt);
+    animate_destroy_sprite(sprite);
     fclose(fp);
+    DBG_PRINT(FAIL, "Create sprite");
     return NULL;
 }
 
@@ -211,7 +216,6 @@ struct sprite* animate_create_circle(size_t radius, color_t c, bool filled)
     }
     circle->height = diameter;
     circle->width = diameter;
-    size_t total_pixels = diameter * diameter;
     circle->grid = NULL; // careful
 
     circle->grid = calloc(diameter * diameter, sizeof(color_t));
@@ -275,10 +279,12 @@ struct sprite* animate_create_circle(size_t radius, color_t c, bool filled)
         ++x;
     }
 
+    DBG_PRINT(SUCCESS, "Create sprite");
     return circle;
 
 fail_circle:
     animate_destroy_sprite(circle);
+    DBG_PRINT(FAIL, "Create circle");
     return NULL;
 }
 
@@ -333,10 +339,12 @@ struct sprite* animate_create_rectangle(size_t width, size_t height,
         }
     }
 
+    DBG_PRINT(SUCCESS, "Create sprite");
     return rect;
 
 fail_rectangle:
     animate_destroy_sprite(rect);
+    DBG_PRINT(FAIL, "Create rectangle");
     return NULL;
 }
 
@@ -376,7 +384,7 @@ struct sprite_placement* animate_place_sprite(struct canvas* canvas,
     placement->initial_y = y;
     placement->sprite = sprite;
     placement->listnode = circularlist_insert(canvas->layers, placement, TOP);
-    placement->params = NULL;
+    placement->params = physics_create_params();
     return placement;
 }
 
@@ -387,6 +395,7 @@ void animate_placement_up(struct sprite_placement* sprite_placement)
         sprite_placement->listnode,
         MOVEUP
     );
+    DBG_PRINT(CUSTOM, "Moved sprite UP");
 }
 
 void animate_placement_down(struct sprite_placement* sprite_placement)
@@ -396,6 +405,7 @@ void animate_placement_down(struct sprite_placement* sprite_placement)
         sprite_placement->listnode,
         MOVEDOWN
     );
+    DBG_PRINT(CUSTOM, "Moved sprite DOWN");
 }
 
 void animate_placement_top(struct sprite_placement* sprite_placement)
@@ -405,6 +415,7 @@ void animate_placement_top(struct sprite_placement* sprite_placement)
         sprite_placement->listnode,
         TOP
     );
+    DBG_PRINT(CUSTOM, "Moved sprite TOP");
 }
 
 void animate_placement_bottom(struct sprite_placement* sprite_placement)
@@ -414,6 +425,7 @@ void animate_placement_bottom(struct sprite_placement* sprite_placement)
         sprite_placement->listnode,
         BOTTOM
     );
+    DBG_PRINT(CUSTOM, "Moved sprite BOTTOM");
 }
 
 void animate_destroy_placement(struct sprite_placement* sprite_placement)
@@ -424,8 +436,9 @@ void animate_destroy_placement(struct sprite_placement* sprite_placement)
     }
 
     circularlist_remove(
-        listnode_get_thislist(sprite_placement->listnode),
-        sprite_placement->listnode);
+        sprite_placement->listnode,
+        listnode_get_thislist(sprite_placement->listnode)
+    );
     free(sprite_placement);
     DBG_PRINT(FREED, "Sprite placement");
 }
@@ -434,13 +447,12 @@ void animate_set_animation_params(struct sprite_placement* sprite_placement,
     ssize_t vx, ssize_t vy,
     ssize_t ax, ssize_t ay)
 {
-    sprite_placement->params = physics_set_params(
+    physics_set_params(
+        sprite_placement->params,
         sprite_placement->initial_x, sprite_placement->initial_y,
         vx, vy,
-        ax, ay);
-    if (!sprite_placement->params) {
-        return;
-    }
+        ax, ay
+    );
 }
 
 void animate_destroy_canvas(struct canvas* canvas)
@@ -463,11 +475,6 @@ size_t animate_frame_size_bytes(struct canvas* canvas)
 void animate_generate_frame(const struct canvas* canvas, size_t frame,
     size_t frame_rate, void* buf)
 {
-    if (sizeof(buf) < sizeof(canvas->grid)) {
-        DBG_PRINT(TOOSMALL, "Buffer");
-        return;
-    }
-
     /* COLOR BACKGROUND */
     for (size_t pixel_y = 0; pixel_y < canvas->height; ++pixel_y) {
         for (size_t pixel_x = 0; pixel_x < canvas->width; ++pixel_x) {
@@ -523,6 +530,7 @@ void animate_generate_frame(const struct canvas* canvas, size_t frame,
                     posx + (ssize_t)pixel_x,
                     canvas->width
                 );
+
                 pixel_set_color(
                     (color_t*)buf,
                     c.raw,
