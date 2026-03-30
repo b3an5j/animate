@@ -15,6 +15,11 @@ typedef union {
     } colors;
 } Channel;
 
+typedef enum {
+    NORMAL,
+    FORCE_ALPHA
+} ColorMode;
+
 static inline color_t* pixel_get_addr(color_t* grid, ssize_t x, ssize_t y,
     size_t height, size_t width)
 {
@@ -28,10 +33,9 @@ static inline color_t pixel_get_color(color_t* grid, ssize_t x, ssize_t y,
 }
 
 static inline void pixel_set_color(color_t* grid, color_t value, ssize_t x, ssize_t y,
-    size_t height, size_t width)
+    size_t height, size_t width, ColorMode mode)
 {
-    /* set A channel to xFF if not 0 */
-    if (value & 0xFF000000) {
+    if (mode == FORCE_ALPHA) {
         value |= 0xFF << 24;
     }
     *pixel_get_addr(grid, x, y, height, width) = value;

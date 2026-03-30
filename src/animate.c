@@ -200,7 +200,8 @@ struct sprite* animate_create_sprite(const char* file)
                 x,
                 y_flipped,
                 sprite->height,
-                sprite->width
+                sprite->width,
+                NORMAL
             );
         }
     }
@@ -276,24 +277,24 @@ struct sprite* animate_create_circle(size_t radius, color_t c, bool filled)
 
     while (x <= y) { // as y decreases, will meet when 45 degrees
         // outline only
-        pixel_set_color(circle->grid, c, (offset + y), (offset + x), diameter, diameter); // octant 1
-        pixel_set_color(circle->grid, c, (offset + x), (offset + y), diameter, diameter); // octant 2
-        pixel_set_color(circle->grid, c, (offset - x), (offset + y), diameter, diameter); // octant 3
-        pixel_set_color(circle->grid, c, (offset - y), (offset + x), diameter, diameter); // octant 4
-        pixel_set_color(circle->grid, c, (offset - y), (offset - x), diameter, diameter); // octant 5
-        pixel_set_color(circle->grid, c, (offset - x), (offset - y), diameter, diameter); // octant 6
-        pixel_set_color(circle->grid, c, (offset + x), (offset - y), diameter, diameter); // octant 7
-        pixel_set_color(circle->grid, c, (offset + y), (offset - x), diameter, diameter); // octant 8
+        pixel_set_color(circle->grid, c, (offset + y), (offset + x), diameter, diameter, NORMAL); // octant 1
+        pixel_set_color(circle->grid, c, (offset + x), (offset + y), diameter, diameter, NORMAL); // octant 2
+        pixel_set_color(circle->grid, c, (offset - x), (offset + y), diameter, diameter, NORMAL); // octant 3
+        pixel_set_color(circle->grid, c, (offset - y), (offset + x), diameter, diameter, NORMAL); // octant 4
+        pixel_set_color(circle->grid, c, (offset - y), (offset - x), diameter, diameter, NORMAL); // octant 5
+        pixel_set_color(circle->grid, c, (offset - x), (offset - y), diameter, diameter, NORMAL); // octant 6
+        pixel_set_color(circle->grid, c, (offset + x), (offset - y), diameter, diameter, NORMAL); // octant 7
+        pixel_set_color(circle->grid, c, (offset + y), (offset - x), diameter, diameter, NORMAL); // octant 8
 
         // fill left to right
         if (filled) {
             for (int32_t head = (offset - x) + 1; head < (offset + x); ++head) {
-                pixel_set_color(circle->grid, c, head, offset + y, diameter, diameter);
-                pixel_set_color(circle->grid, c, head, offset - y, diameter, diameter);
+                pixel_set_color(circle->grid, c, head, offset + y, diameter, diameter, NORMAL);
+                pixel_set_color(circle->grid, c, head, offset - y, diameter, diameter, NORMAL);
             }
             for (int32_t head = (offset - y) + 1; head < (offset + y); ++head) {
-                pixel_set_color(circle->grid, c, head, offset + x, diameter, diameter);
-                pixel_set_color(circle->grid, c, head, offset - x, diameter, diameter);
+                pixel_set_color(circle->grid, c, head, offset + x, diameter, diameter, NORMAL);
+                pixel_set_color(circle->grid, c, head, offset - x, diameter, diameter, NORMAL);
             }
         }
 
@@ -363,16 +364,16 @@ struct sprite* animate_create_rectangle(size_t width, size_t height,
         // bottom and up
         for (uint32_t x = 0; x < rect->width; ++x) {
             pixel_set_color(rect->grid, c, x, 0,
-                rect->height, rect->width);
+                rect->height, rect->width, NORMAL);
             pixel_set_color(rect->grid, c, x, rect->height - 1,
-                rect->height, rect->width);
+                rect->height, rect->width, NORMAL);
         }
         // left and right
         for (uint32_t y = 1; y < rect->height - 1; ++y) {
             pixel_set_color(rect->grid, c, 0, y,
-                rect->height, rect->width);
+                rect->height, rect->width, NORMAL);
             pixel_set_color(rect->grid, c, rect->width - 1, y,
-                rect->height, rect->width);
+                rect->height, rect->width, NORMAL);
         }
     }
 
@@ -524,7 +525,8 @@ void animate_generate_frame(const struct canvas* canvas, size_t frame,
                 pixel_x,
                 pixel_y,
                 canvas->height,
-                canvas->width
+                canvas->width,
+                FORCE_ALPHA
             );
         }
     }
@@ -576,7 +578,8 @@ void animate_generate_frame(const struct canvas* canvas, size_t frame,
                     target_x,
                     target_y,
                     canvas->height,
-                    canvas->width
+                    canvas->width,
+                    FORCE_ALPHA
                 );
             }
         }
