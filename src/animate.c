@@ -230,6 +230,8 @@ struct sprite* animate_create_circle(size_t radius, color_t c, bool filled)
         DBG_PRINT(ERR_MALLOC, "circle sprite");
         return NULL;
     }
+    // width == height == radius*2+1
+    size_t diameter = (2 * radius) + 1;
 
     /* SPECIAL CASE */
     if (!radius) {
@@ -249,7 +251,6 @@ struct sprite* animate_create_circle(size_t radius, color_t c, bool filled)
     }
 
     /* NORMAL CASE */
-    size_t diameter = (2 * radius) - 1;
     if (!validate_dimension(diameter, diameter)) {
         goto fail_circle;
     }
@@ -269,11 +270,11 @@ struct sprite* animate_create_circle(size_t radius, color_t c, bool filled)
     // assume start from middle, all diameter odd, easier to place
     // if not filled, color only edges
     // Midpoint functions are scaled by 4
-    uint32_t x = 0;
-    uint32_t y = radius - 1;
-    uint32_t offset = radius - 1;
+    ssize_t x = 0;
+    ssize_t y = radius;
+    ssize_t offset = radius;
     // x = 0, y = radius, initial d is (scaled) 5-4r
-    int32_t d = 5 - (4 * radius);
+    ssize_t d = 5 - (4 * radius);
 
     while (x <= y) { // as y decreases, will meet when 45 degrees
         // outline only
