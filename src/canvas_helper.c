@@ -1,4 +1,5 @@
 #include "canvas_helper.h"
+#include <assert.h>
 
 struct circular_list {
     uint32_t size;
@@ -35,6 +36,7 @@ static struct list_node* create_listnode(struct circular_list* circlist,
     struct list_node* after, struct list_node* before,
     struct sprite_placement* data)
 {
+    assert(circlist && data);
     struct list_node* listnode = malloc(sizeof(*listnode));
     if (!listnode) {
         DBG_PRINT(ERR_MALLOC, "list node");
@@ -76,15 +78,45 @@ struct sprite_placement* canvas_advance_layer(struct circular_list* circlist)
         return NULL;
     }
     struct sprite_placement* ret = circlist->current->data;
-    if (circlist->current->after) {
-        circlist->current = circlist->current->after;
-    }
+    assert(circlist->current->after != NULL);
+    circlist->current = circlist->current->after;
     return ret;
 }
 
 void circularlist_goto_first(struct circular_list* circlist)
 {
+    if (!circlist) {
+        DBG_PRINT(INVALID_ARG, "circlist");
+    }
     circlist->current = circlist->first;
+}
+
+static void listnode_insert_between(struct list_node* prev, struct list_node* next,
+    struct list_node* node)
+{
+    assert(prev && next && node);
+    assert(prev->thislist);
+    assert(prev->thislist == next->thislist);
+
+    prev->after = node;
+    next->before = node;
+    node->after = next;
+    node->before = prev;
+    node->thislist = prev->thislist;
+}
+
+static void listnode_unlink(struct list_node* node)
+{
+    assert(node);
+    // assumption circular list holds
+    assert(node->before);
+    assert(node->after);
+
+    node->before->after = node->after;
+    node->after->before = node->before;
+    node->before = NULL;
+    node->after = NULL;
+    node->thislist = NULL;
 }
 
 struct list_node* circularlist_insert(struct circular_list* circlist,
@@ -99,6 +131,7 @@ struct list_node* circularlist_insert(struct circular_list* circlist,
         return NULL;
     }
     if (mode != TOP && mode != BOTTOM) {
+        DBG_PRINT(INVALID_ARG, "mode");
         return NULL;
     }
 
@@ -118,11 +151,7 @@ struct list_node* circularlist_insert(struct circular_list* circlist,
     }
     // non empty list
     else {
-        new->after = circlist->first;
-        new->before = circlist->last;
-
-        circlist->first->before = new;
-        circlist->last->after = new;
+        listnode_insert_between(circlist->last, circlist->first, new);
     }
 
     if (mode == TOP) {
@@ -135,23 +164,6 @@ struct list_node* circularlist_insert(struct circular_list* circlist,
     return new;
 }
 
-static void listnode_insert_between(struct list_node* prev, struct list_node* next,
-    struct list_node* node)
-{
-    prev->after = node;
-    next->before = node;
-    node->after = next;
-    node->before = prev;
-}
-
-static void listnode_unlink(struct list_node* node)
-{
-    node->before->after = node->after;
-    node->after->before = node->before;
-    node->before = NULL;
-    node->after = NULL;
-}
-
 bool circularlist_move(struct circular_list* circlist,
     struct list_node* listnode, PlacementMode mode)
 {
@@ -159,10 +171,13 @@ bool circularlist_move(struct circular_list* circlist,
         DBG_PRINT(INVALID_ARG, "circlist");
         return false;
     }
-    if (!listnode || listnode->thislist != circlist) {
+    if (!listnode) {
         DBG_PRINT(INVALID_ARG, "listnode");
         return false;
     }
+
+    assert(listnode->thislist == circlist);
+    assert(circlist->size > 0);
 
     /* ONLY 1 NODE */
     if (circlist->size == 1) {
@@ -183,6 +198,11 @@ bool circularlist_move(struct circular_list* circlist,
     }
     /* MULTIPLE NODES */
     else {
+        // advance if current
+        if (listnode == circlist->current) {
+            circlist->current = listnode->after;
+        }
+
         // repair hole in advance
         if (listnode == circlist->first) {
             circlist->first = listnode->after;
@@ -191,22 +211,27 @@ bool circularlist_move(struct circular_list* circlist,
             circlist->last = listnode->before;
         }
 
+        // struct list_node* old_prev = listnode->before;
+        // struct list_node* old_next = listnode->after;
         listnode_unlink(listnode);
-        listnode_insert_between(
-            circlist->last,
-            circlist->first,
-            listnode
-        );
 
         switch (mode) {
         case TOP:
+            listnode_insert_between(
+                circlist->last,
+                circlist->first,
+                listnode
+            );
             circlist->last = listnode;
-            circlist->first = listnode->after;
             break;
 
         case BOTTOM:
+            listnode_insert_between(
+                circlist->last,
+                circlist->first,
+                listnode
+            );
             circlist->first = listnode;
-            circlist->last = listnode->before;
             break;
 
         default:
@@ -220,12 +245,15 @@ bool circularlist_remove(struct list_node* listnode, struct circular_list* circl
 {
     if (!circlist) {
         DBG_PRINT(INVALID_ARG, "circlist");
-        return NULL;
+        return 1;
     }
-    if (!listnode || listnode->thislist != circlist) {
+    if (!listnode) {
         DBG_PRINT(INVALID_ARG, "listnode");
-        return NULL;
+        return 1;
     }
+
+    assert(listnode->thislist == circlist);
+    assert(circlist->size > 0);
 
     if (circlist->size == 1) {
         circlist->current = NULL;
@@ -233,6 +261,7 @@ bool circularlist_remove(struct list_node* listnode, struct circular_list* circl
         circlist->last = NULL;
     }
     else {
+        assert(circlist->first != circlist->last);
         if (listnode == circlist->current) {
             circlist->current = listnode->after;
         }
@@ -240,25 +269,32 @@ bool circularlist_remove(struct list_node* listnode, struct circular_list* circl
         if (listnode == circlist->first) {
             circlist->first = listnode->after;
         }
-        else if (listnode == circlist->last) {
+        if (listnode == circlist->last) {
             circlist->last = listnode->before;
         }
     }
-    listnode_unlink(listnode);
 
+    listnode_unlink(listnode);
     free(listnode);
     DBG_PRINT(FREED, "List node");
+
     --circlist->size;
     DBG_PRINT(CUSTOM, "Removed list node from circular list.");
-    return true;
+    return 0;
 }
 
 uint32_t circularlist_get_listsize(struct circular_list* circlist)
 {
+    if (!circlist) {
+        DBG_PRINT(INVALID_ARG, "circlist");
+    }
     return circlist->size;
 }
 
 struct circular_list* listnode_get_thislist(struct list_node* listnode)
 {
+    if (!listnode) {
+        DBG_PRINT(INVALID_ARG, "listnode");
+    }
     return listnode->thislist;
 }

@@ -1,4 +1,5 @@
 #include "physics_helper.h"
+#include <assert.h>
 
 struct direction {
     ssize_t velocity;
@@ -40,6 +41,7 @@ void physics_set_params(
     ssize_t x_velocity, ssize_t y_velocity,
     ssize_t x_acceleration, ssize_t y_acceleration)
 {
+    assert(params);
     params->x = (struct direction){
         .velocity = x_velocity,
         .acceleration = x_acceleration
@@ -52,6 +54,8 @@ void physics_set_params(
 
 static ssize_t physics_calculate_posdiff(struct direction* dir, double delta_time)
 {
+    assert(dir);
+
     double v_diff = (dir->velocity) ? (double)dir->velocity * delta_time : 0;
     double a_diff = (dir->acceleration) ?
         0.5 * (double)dir->acceleration * delta_time * delta_time :
@@ -64,16 +68,19 @@ static ssize_t physics_calculate_posdiff(struct direction* dir, double delta_tim
 
 ssize_t physics_calculate_posx(ssize_t initial_x, struct params* params, double delta_time)
 {
+    assert(params);
     return initial_x + physics_calculate_posdiff(&params->x, delta_time);
 }
 
 ssize_t physics_calculate_posy(ssize_t initial_y, struct params* params, double delta_time)
 {
+    assert(params);
     return initial_y + physics_calculate_posdiff(&params->y, delta_time);
 }
 
 double physics_get_deltatime(size_t frame, size_t frame_rate)
 {
+    assert(frame_rate > 0);
     if (frame <= 0) {
         return 0;
     }

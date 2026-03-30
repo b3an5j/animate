@@ -3,8 +3,10 @@
 #include "misc_helper.h"
 #include "physics_helper.h"
 #include "pixel_helper.h"
+#include <assert.h>
 
 struct sprite {
+    ssize_t refcount;
     size_t height;
     size_t width;
     color_t* grid;
@@ -117,6 +119,16 @@ fail_canvas:
     return NULL;
 }
 
+static void set_new_sprite(struct sprite* sprite, size_t height, size_t width)
+{
+    assert(sprite && height && width);
+
+    sprite->refcount = 0;
+    sprite->height = height;
+    sprite->width = width;
+    sprite->grid = NULL;
+}
+
 struct sprite* animate_create_sprite(const char* file)
 {
     size_t ret; // temp for fread
@@ -169,11 +181,9 @@ struct sprite* animate_create_sprite(const char* file)
         DBG_PRINT(INVALID_DIM, header_v5.bV5Height, header_v5.bV5Width);
         goto fail_sprite;
     }
-    sprite->height = header_v5.bV5Height;
-    sprite->width = header_v5.bV5Width;
-    size_t total_pixels = header_v5.bV5Height * header_v5.bV5Width;
-    sprite->grid = NULL; // careful
+    set_new_sprite(sprite, header_v5.bV5Height, header_v5.bV5Width);
 
+    size_t total_pixels = header_v5.bV5Height * header_v5.bV5Width;
     sprite->grid = malloc(total_pixels * sizeof(color_t));
     if (!sprite->grid) {
         DBG_PRINT(ERR_MALLOC_WSIZE, "sprite grid",
@@ -233,38 +243,17 @@ struct sprite* animate_create_circle(size_t radius, color_t c, bool filled)
     // width == height == radius*2+1
     size_t diameter = (2 * radius) + 1;
 
-    /* SPECIAL CASE */
-    if (!radius) {
-        circle->height = 1;
-        circle->width = 1;
-        circle->grid = NULL; // careful
-
-        circle->grid = malloc(sizeof(color_t));
-        if (!circle->grid) {
-            DBG_PRINT(ERR_MALLOC_WSIZE, "circle grid", diameter, diameter);
-            goto fail_circle;
-        }
-
-        // exit early
-        *(circle->grid) = c;
-        return circle;
-    }
-
-    /* NORMAL CASE */
     if (!validate_dimension(diameter, diameter)) {
         goto fail_circle;
     }
 
-    circle->height = diameter;
-    circle->width = diameter;
-    circle->grid = NULL; // careful
+    set_new_sprite(circle, diameter, diameter);
 
     circle->grid = calloc(diameter * diameter, sizeof(color_t));
     if (!circle->grid) {
         DBG_PRINT(ERR_MALLOC_WSIZE, "circle grid", radius, radius);
         goto fail_circle;
     }
-
 
     /* CALCULATE THE BOUNDARY AND FILL COLOR */
     size_t radius_squared = radius * radius;
@@ -318,12 +307,10 @@ struct sprite* animate_create_rectangle(size_t width, size_t height,
         DBG_PRINT(ERR_MALLOC, "rectangle sprite");
         return NULL;
     }
-    rect->height = height;
-    rect->width = width;
-    size_t total_pixels = width * height;
-    rect->grid = NULL; // careful
 
-    rect->grid = calloc(height * width, sizeof(color_t));
+    set_new_sprite(rect, height, width);
+    size_t total_pixels = width * height;
+    rect->grid = calloc(total_pixels, sizeof(color_t));
     if (!rect->grid) {
         DBG_PRINT(ERR_MALLOC_WSIZE, "rectangle grid",
             rect->height, rect->width);
@@ -369,14 +356,20 @@ bool animate_destroy_sprite(struct sprite* sprite)
 {
     if (!sprite) {
         DBG_PRINT(FREED, "Nothing / NULL");
-        return false;
+        return 0;
+    }
+
+    assert(sprite->refcount >= 0);
+    if (sprite->refcount) {
+        DBG_PRINT(CUSTOM, "%zu sprites are still in use.\n", sprite->refcount);
+        return 1;
     }
 
     free(sprite->grid);
     sprite->grid = NULL; // careful
     free(sprite);
     DBG_PRINT(FREED, "Sprite");
-    return false;
+    return 0;
 }
 
 struct sprite_placement* animate_place_sprite(struct canvas* canvas,
@@ -403,11 +396,17 @@ struct sprite_placement* animate_place_sprite(struct canvas* canvas,
     placement->sprite = sprite;
     placement->listnode = circularlist_insert(canvas->layers, placement, TOP);
     placement->params = physics_create_params();
+    ++sprite->refcount;
     return placement;
 }
 
 void animate_placement_up(struct sprite_placement* sprite_placement)
 {
+    if (!sprite_placement) {
+        DBG_PRINT(INVALID_ARG, "sprite_placement");
+        return;
+    };
+
     circularlist_move(
         listnode_get_thislist(sprite_placement->listnode),
         sprite_placement->listnode,
@@ -418,6 +417,11 @@ void animate_placement_up(struct sprite_placement* sprite_placement)
 
 void animate_placement_down(struct sprite_placement* sprite_placement)
 {
+    if (!sprite_placement) {
+        DBG_PRINT(INVALID_ARG, "sprite_placement");
+        return;
+    };
+
     circularlist_move(
         listnode_get_thislist(sprite_placement->listnode),
         sprite_placement->listnode,
@@ -428,6 +432,11 @@ void animate_placement_down(struct sprite_placement* sprite_placement)
 
 void animate_placement_top(struct sprite_placement* sprite_placement)
 {
+    if (!sprite_placement) {
+        DBG_PRINT(INVALID_ARG, "sprite_placement");
+        return;
+    };
+
     circularlist_move(
         listnode_get_thislist(sprite_placement->listnode),
         sprite_placement->listnode,
@@ -438,6 +447,11 @@ void animate_placement_top(struct sprite_placement* sprite_placement)
 
 void animate_placement_bottom(struct sprite_placement* sprite_placement)
 {
+    if (!sprite_placement) {
+        DBG_PRINT(INVALID_ARG, "sprite_placement");
+        return;
+    };
+
     circularlist_move(
         listnode_get_thislist(sprite_placement->listnode),
         sprite_placement->listnode,
@@ -458,6 +472,7 @@ void animate_destroy_placement(struct sprite_placement* sprite_placement)
         sprite_placement->listnode,
         listnode_get_thislist(sprite_placement->listnode)
     );
+    --sprite_placement->sprite->refcount;
     free(sprite_placement);
     DBG_PRINT(FREED, "Sprite placement");
 }
@@ -466,6 +481,11 @@ void animate_set_animation_params(struct sprite_placement* sprite_placement,
     ssize_t vx, ssize_t vy,
     ssize_t ax, ssize_t ay)
 {
+    if (!sprite_placement) {
+        DBG_PRINT(INVALID_ARG, "sprite_placement");
+        return;
+    };
+
     physics_set_params(
         sprite_placement->params,
         sprite_placement->initial_x, sprite_placement->initial_y,
@@ -488,12 +508,26 @@ void animate_destroy_canvas(struct canvas* canvas)
 
 size_t animate_frame_size_bytes(struct canvas* canvas)
 {
+    if (!canvas) {
+        DBG_PRINT(INVALID_ARG, "canvas");
+        return 0;
+    };
+
     return canvas->height * canvas->width * sizeof(color_t);
 }
 
 void animate_generate_frame(const struct canvas* canvas, size_t frame,
     size_t frame_rate, void* buf)
 {
+    if (!canvas) {
+        DBG_PRINT(INVALID_ARG, "canvas");
+        return;
+    }
+    if (!buf) {
+        DBG_PRINT(INVALID_ARG, "buf");
+        return;
+    }
+
     /* COLOR BACKGROUND */
     for (size_t pixel_y = 0; pixel_y < canvas->height; ++pixel_y) {
         for (size_t pixel_x = 0; pixel_x < canvas->width; ++pixel_x) {
@@ -569,4 +603,12 @@ void animate_generate_frame(const struct canvas* canvas, size_t frame,
 void animate_set_animation_function(struct sprite_placement* sprite_placement,
     animate_fn, void* priv)
 {
+    if (!sprite_placement) {
+        DBG_PRINT(INVALID_ARG, "sprite_placement");
+        return;
+    };
+    if (!priv) {
+        DBG_PRINT(INVALID_ARG, "priv");
+        return;
+    };
 }
