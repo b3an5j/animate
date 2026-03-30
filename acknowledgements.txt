@@ -13,3 +13,4 @@ https://stackoverflow.com/questions/36680470/when-should-i-use-ld-instead-of-gcc
 https://www.mssl.ucl.ac.uk/swift/om/sw/help/man/ld.html
 https://stackoverflow.com/questions/71370549/reverse-recursive-makefile-suppress-entering-leaving-directory-messages
 https://stackoverflow.com/questions/7430248/creating-a-new-directory-in-c
+https://git-scm.com/book/en/v2/Git-Tools-Rewriting-History

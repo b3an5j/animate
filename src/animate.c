@@ -267,55 +267,33 @@ struct sprite* animate_create_circle(size_t radius, color_t c, bool filled)
 
 
     /* CALCULATE THE BOUNDARY AND FILL COLOR */
-    // assume start from middle, all diameter odd, easier to place
-    // if not filled, color only edges
-    // Midpoint functions are scaled by 4
-    ssize_t x = 0;
-    ssize_t y = radius;
-    ssize_t offset = radius;
-    // x = 0, y = radius, initial d is (scaled) 5-4r
-    ssize_t d = 5 - (4 * radius);
-
-    while (x <= y) { // as y decreases, will meet when 45 degrees
-        // outline only
-        pixel_set_color(circle->grid, c, (offset + y), (offset + x), diameter, diameter, NORMAL); // octant 1
-        pixel_set_color(circle->grid, c, (offset + x), (offset + y), diameter, diameter, NORMAL); // octant 2
-        pixel_set_color(circle->grid, c, (offset - x), (offset + y), diameter, diameter, NORMAL); // octant 3
-        pixel_set_color(circle->grid, c, (offset - y), (offset + x), diameter, diameter, NORMAL); // octant 4
-        pixel_set_color(circle->grid, c, (offset - y), (offset - x), diameter, diameter, NORMAL); // octant 5
-        pixel_set_color(circle->grid, c, (offset - x), (offset - y), diameter, diameter, NORMAL); // octant 6
-        pixel_set_color(circle->grid, c, (offset + x), (offset - y), diameter, diameter, NORMAL); // octant 7
-        pixel_set_color(circle->grid, c, (offset + y), (offset - x), diameter, diameter, NORMAL); // octant 8
-
-        // fill left to right
-        if (filled) {
-            for (int32_t head = (offset - x) + 1; head < (offset + x); ++head) {
-                pixel_set_color(circle->grid, c, head, offset + y, diameter, diameter, NORMAL);
-                pixel_set_color(circle->grid, c, head, offset - y, diameter, diameter, NORMAL);
-            }
-            for (int32_t head = (offset - y) + 1; head < (offset + y); ++head) {
-                pixel_set_color(circle->grid, c, head, offset + x, diameter, diameter, NORMAL);
-                pixel_set_color(circle->grid, c, head, offset - x, diameter, diameter, NORMAL);
+    size_t radius_squared = radius * radius;
+    // check only one quadrant
+    for (size_t y = 0; y <= radius; ++y) {
+        for (size_t x = 0; x <= radius; ++x) {
+            if (x * x + y * y <= radius_squared) {
+                pixel_set_color(circle->grid, c,
+                    radius + x, radius + y,
+                    circle->height, circle->width,
+                    NORMAL
+                ); // quadrant 1
+                pixel_set_color(circle->grid, c,
+                    radius - x, radius + y,
+                    circle->height, circle->width,
+                    NORMAL
+                ); // quadrant 2
+                pixel_set_color(circle->grid, c,
+                    radius + x, radius - y,
+                    circle->height, circle->width,
+                    NORMAL
+                ); // quadrant 3
+                pixel_set_color(circle->grid, c,
+                    radius - x, radius - y,
+                    circle->height, circle->width,
+                    NORMAL
+                ); // quadrant 4
             }
         }
-
-        // d_step = d_next - d
-        if (d < 0) {
-            // Y NO CHANGE
-            // d = x^2 + (y + .5)^2 - r^2
-            // d_next = (x+1)^2 + (y + .5)^2 - r^2
-            // d_step = 2x + 1 or scaled 8x + 4
-            d += 8 * x + 4;
-        }
-        else {
-            // Y CHANGE
-            // d = x^2 + (y - .5)^2 - r^2
-            // d_next = (x+1)^2 + (y - 1.5)^2 - r^2
-            // d_step = 2(x-y) + 3 or scaled 8(x-y) + 12
-            d += 8 * (x - y) + 12;
-            --y;
-        }
-        ++x;
     }
 
     DBG_PRINT(SUCCESS, "Create sprite");
