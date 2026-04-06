@@ -59,11 +59,13 @@ animate.o: $(ANIMATE_OBJ)
 	$(Q)rm -f animate.o
 	@echo "Bundling into \"$@\" ..."
 	$(Q)$(CC) $(LDFLAGS) -r $^ -o $@
+	@echo "Done linking \"animate.o\"."
 
 test: $(TEST_OBJ) animate.o
 	$(Q)rm -f test
-	@echo "Linking test executable \"$@\" ..."
-	$(Q)$(CC) $(CFLAGS) $^ -o $@
+	@echo "Linking test executable \"tests/$@\" ..."
+	$(Q)$(CC) $(CFLAGS) $^ -o "./tests/$@"
+	@echo "Done compiling \"test\"."
 
 $(OBJDIR)/%.o: %.c $(HEADERS)
 	@mkdir -p $(dir $@D)
@@ -99,13 +101,14 @@ $(API_DOC): Doxyfile | animate.h
 
 clean:
 	$(Q)rm -rf obj
-	$(Q)rm -rf frames
-	$(Q)rm -f test
-	$(Q)rm -f animate.o
 	$(Q)rm -f Doxyfile
 	$(Q)rm -rf latex
 
 clobber: clean
-	rm -f $(API_DOC)
+	$(Q)rm -f animate.o
+	$(Q)rm -rf tests/frames
+	$(Q)rm -rf tests/out
+	$(Q)rm -f tests/test
+	$(Q)rm -f $(API_DOC)
 
 .PHONY: doc clean clobber default test test_asan test_debug animate.o

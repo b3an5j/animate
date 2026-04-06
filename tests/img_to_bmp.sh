@@ -1,0 +1,1 @@
+mogrify -format bmp -depth 8 -alpha on "$1"
