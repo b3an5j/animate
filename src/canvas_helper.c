@@ -183,19 +183,6 @@ bool circularlist_move(struct circular_list* circlist,
     if (circlist->size == 1) {
         return true;
     }
-    /* ONLY 2 NODES */
-    else if (circlist->size == 2) {
-        if (mode == TOP && listnode == circlist->first) {
-            struct list_node* temp = circlist->first;
-            circlist->first = circlist->last;
-            circlist->last = temp;
-        }
-        else if (mode == BOTTOM && listnode == circlist->last) {
-            struct list_node* temp = circlist->first;
-            circlist->first = circlist->last;
-            circlist->last = temp;
-        }
-    }
     /* MULTIPLE NODES */
     else {
         // advance if current
@@ -203,16 +190,16 @@ bool circularlist_move(struct circular_list* circlist,
             circlist->current = listnode->after;
         }
 
+        struct list_node* old_prev = listnode->before;
+        struct list_node* old_next = listnode->after;
+
         // repair hole in advance
         if (listnode == circlist->first) {
-            circlist->first = listnode->after;
+            circlist->first = old_next;
         }
         if (listnode == circlist->last) {
-            circlist->last = listnode->before;
+            circlist->last = old_prev;
         }
-
-        // struct list_node* old_prev = listnode->before;
-        // struct list_node* old_next = listnode->after;
         listnode_unlink(listnode);
 
         switch (mode) {
@@ -232,6 +219,32 @@ bool circularlist_move(struct circular_list* circlist,
                 listnode
             );
             circlist->first = listnode;
+            break;
+
+        case MOVEUP:
+            listnode_insert_between(
+                old_next,
+                old_next->after,
+                listnode
+            );
+
+            // reached the top layer
+            if (listnode->before == circlist->last) {
+                circlist->last = listnode;
+            }
+            break;
+
+        case MOVEDOWN:
+            listnode_insert_between(
+                old_prev->before,
+                old_prev,
+                listnode
+            );
+
+            // reached the bottom layer
+            if (listnode->after == circlist->first) {
+                circlist->first = listnode;
+            }
             break;
 
         default:
