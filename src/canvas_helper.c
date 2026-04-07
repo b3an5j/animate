@@ -32,9 +32,11 @@ struct circular_list* canvas_create_circularlist()
     return circlist;
 }
 
+/* Creates a new empty listnode */
 static struct list_node* create_listnode(struct circular_list* circlist,
-    struct list_node* after, struct list_node* before,
-    struct sprite_placement* data)
+                                         struct list_node* after,
+                                         struct list_node* before,
+                                         struct sprite_placement* data)
 {
     assert(circlist && data);
     struct list_node* listnode = malloc(sizeof(*listnode));
@@ -91,10 +93,13 @@ void circularlist_goto_first(struct circular_list* circlist)
     circlist->current = circlist->first;
 }
 
-static void listnode_insert_between(struct list_node* prev, struct list_node* next,
-    struct list_node* node)
+/* Inserts a listnode in between two list nodes */
+static void listnode_insert_between(struct list_node* prev,
+                                    struct list_node* next,
+                                    struct list_node* node)
 {
     assert(prev && next && node);
+    assert(prev->after == next);
     assert(prev->thislist);
     assert(prev->thislist == next->thislist);
 
@@ -105,6 +110,7 @@ static void listnode_insert_between(struct list_node* prev, struct list_node* ne
     node->thislist = prev->thislist;
 }
 
+/* Unlink a node, detach it from its circular list */
 static void listnode_unlink(struct list_node* node)
 {
     assert(node);
@@ -120,7 +126,8 @@ static void listnode_unlink(struct list_node* node)
 }
 
 struct list_node* circularlist_insert(struct circular_list* circlist,
-    struct sprite_placement* data, PlacementMode mode)
+                                      struct sprite_placement* data,
+                                      PlacementMode mode)
 {
     if (!circlist) {
         DBG_PRINT(INVALID_ARG, "circlist");
@@ -165,7 +172,8 @@ struct list_node* circularlist_insert(struct circular_list* circlist,
 }
 
 bool circularlist_move(struct circular_list* circlist,
-    struct list_node* listnode, PlacementMode mode)
+                       struct list_node* listnode,
+                       PlacementMode mode)
 {
     if (!circlist) {
         DBG_PRINT(INVALID_ARG, "circlist");
@@ -254,15 +262,16 @@ bool circularlist_move(struct circular_list* circlist,
     return true;
 }
 
-bool circularlist_remove(struct list_node* listnode, struct circular_list* circlist)
+bool circularlist_remove(struct list_node* listnode,
+                         struct circular_list* circlist)
 {
     if (!circlist) {
         DBG_PRINT(INVALID_ARG, "circlist");
-        return 1;
+        return false;
     }
     if (!listnode) {
         DBG_PRINT(INVALID_ARG, "listnode");
-        return 1;
+        return false;
     }
 
     assert(listnode->thislist == circlist);
@@ -293,7 +302,7 @@ bool circularlist_remove(struct list_node* listnode, struct circular_list* circl
 
     --circlist->size;
     DBG_PRINT(CUSTOM, "Removed list node from circular list.");
-    return 0;
+    return true;
 }
 
 uint32_t circularlist_get_listsize(struct circular_list* circlist)

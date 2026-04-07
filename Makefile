@@ -81,9 +81,15 @@ Doxyfile:
 	# Adjust params
 	sed -i 's/\(GENERATE_HTML *= *\).*/\1NO/g' $@
 	sed -i 's/\(EXTRACT_ALL *= *\).*/\1YES/g' $@
-	sed -i 's/\(INPUT *= *\).*/\1"animate.h"/g' $@
+	sed -i 's/\(EXTRACT_STATIC *= *\).*/\1YES/g' $@
+	sed -i 's/\(INLINE_INFO *= *\).*/\1YES/g' $@
+	sed -i 's|\(INPUT *= *\).*|\1$(HEADERS)|g' $@
 	sed -i 's/\(PROJECT_NAME *= *\).*/\1"PointerPro Animate"/g' $@
 	sed -i 's/\(OPTIMIZE_OUTPUT_FOR_C *= *\).*/\1YES/g' $@
+	sed -i 's/\(ENABLE_PREPROCESSING *= *\).*/\1YES/g' $@
+	sed -i 's/\(MACRO_EXPANSION *= *\).*/\1YES/g' $@
+	sed -i 's/\(PREDEFINED *= *\).*/\1DEBUG/g' $@
+	sed -i 's/\(ENUM_VALUES_PER_LINE *= *\).*/\11/g' $@
 
 $(API_DOC): DOC_MAKEFILE=latex/Makefile
 $(API_DOC): DOC_TOP=latex/refman.tex
@@ -93,7 +99,6 @@ $(API_DOC): Doxyfile | animate.h
 	sed -i 's/\t$$(MKIDX/\t#/g'             $(DOC_MAKEFILE)
 	# Remove some dead chapters and ToC
 	sed -i 's/^ *\\clearemptydoublepage//g' $(DOC_TOP)
-	sed -i 's/^ *\\tableofcontents//g'      $(DOC_TOP)
 	sed -i 's/^ *\\chapter{File Index}//g'  $(DOC_TOP)
 	sed -i 's/^ *\\input{files}//g'         $(DOC_TOP)
 	cd latex && make

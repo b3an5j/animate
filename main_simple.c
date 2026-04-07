@@ -33,7 +33,7 @@ int main(int argc, char** argv)
     struct sprite_placement* pch = animate_place_sprite(canvas, crosshair, 0, 0);
     if (!prect1 || !prect2 || !prick1 || !prick2 || !pcirc || !pch) {
         printf("FAILED\n");
-        return 1;
+        goto early_exit;
     }
 
     /* TEST LAYERING */
@@ -51,14 +51,14 @@ int main(int argc, char** argv)
     FILE* fp = fopen(OUTPUT_FILE, "w");
     if (fp == NULL) {
         perror("Failed to open target file");
-        return -1;
+        goto early_exit;
     }
 
     size_t bytes_written = fwrite(data, 1, frame_size_bytes, fp);
     if (bytes_written != frame_size_bytes) {
         printf("Failed to write buffer (%ld/%ld): %s\n", bytes_written,
             frame_size_bytes, strerror(errno));
-        return -1;
+        goto early_exit;
     }
 
     /* TEST PHYSICS */
@@ -70,7 +70,8 @@ int main(int argc, char** argv)
     animate_set_animation_params(pch, 40, 40, 20, 20);
     output_frames(canvas, 300, 60);
 
-    fclose(fp);
+early_exit:
+    if (fp != NULL) { fclose(fp); }
     free(data);
 
     animate_destroy_canvas(canvas);

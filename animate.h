@@ -1,3 +1,7 @@
+/**
+ * @file animate.h
+ * @brief The API of this engine
+*/
 #ifndef ANIMATE_H
 #define ANIMATE_H
 
@@ -5,15 +9,40 @@
 #include <stdint.h>    /* for uint32_t       */
 #include <sys/types.h> /* for size_t/ssize_t */
 
-/**
+/*
  * Abstract data types
  * Exposing the content of these structs allows users to
  * make assumptions on underlying implementation details
  * If we improve the implementation, many users may need
  * to modify their code as the assumptions no longer hold.
  */
+
+ /**
+  * @struct sprite
+  * @brief Represents a drawable sprite.
+  * @details This is the sprite of the bitmap file loaded,
+  * circle, or rectangle. One may reference a sprite many times,
+  * i.e. creating multiple sprite placements.
+  */
 struct sprite;
+
+/**
+ * @struct canvas
+ * @brief Represents the animation canvas.
+ * @details This is where sprite placement will be placed
+ * and moved around. Frames will be generated from
+ * canvas background and layers of sprite_placements.
+ */
 struct canvas;
+
+/**
+ * @struct sprite_placement
+ * @brief Represents a placement of reference of sprite
+ * @details This is the reference of a sprite that can be placed
+ * on canvas and moved around. Sprites stack on each other,
+ * so they form layers, and they can be moved UP, DOWN, TOP, BOTTOM.
+ *
+ */
 struct sprite_placement;
 
 /**
@@ -47,7 +76,7 @@ static inline color_t animate_color_rgb(unsigned r, unsigned g, unsigned b)
  * @brief Helper function for creating assigning an argb value to a pixel
  */
 static inline color_t animate_color_argb(unsigned a,
-    unsigned r, unsigned g, unsigned b)
+                                         unsigned r, unsigned g, unsigned b)
 {
     return animate_color_rgb(r, g, b) | ((a & 0xff) << 24);
 }
@@ -63,7 +92,7 @@ static inline color_t animate_color_argb(unsigned a,
  * function
  */
 struct canvas* animate_create_canvas(size_t height, size_t width,
-    color_t background_color);
+                                     color_t background_color);
 
 /**
  * @brief Clean up a canvas
@@ -84,6 +113,7 @@ void animate_destroy_canvas(struct canvas* canvas);
  * pixel is the top right. For simplicity, reverse the order of rows
  * while loading the bitmap.
  * @param file the name of the bitmap file to be loaded
+ * @return Sprite instance. This then can be used as a reference for placements.
  */
 struct sprite* animate_create_sprite(const char* file);
 
@@ -98,7 +128,7 @@ struct sprite* animate_create_sprite(const char* file);
  * @return A handle to the created sprite
  */
 struct sprite* animate_create_rectangle(size_t width, size_t height, color_t c,
-    bool filled);
+                                        bool filled);
 
 /**
  * @brief Create a sprite that represents a circle
@@ -139,8 +169,8 @@ bool animate_destroy_sprite(struct sprite* sprite);
  * @return A handle to a sprite placement.
  */
 struct sprite_placement* animate_place_sprite(struct canvas* canvas,
-    struct sprite* sprite,
-    ssize_t x, ssize_t y);
+                                              struct sprite* sprite,
+                                              ssize_t x, ssize_t y);
 
 /**
  * @brief Raise a sprite one level towards the top layer
@@ -189,22 +219,20 @@ void animate_destroy_placement(struct sprite_placement* sprite_placement);
  * @param ay the acceleration in the y direction
  */
 void animate_set_animation_params(struct sprite_placement* sprite_placement,
-    ssize_t vx, ssize_t vy,
-    ssize_t ax, ssize_t ay);
+                                  ssize_t vx, ssize_t vy,
+                                  ssize_t ax, ssize_t ay);
 
 /**
- * @breif [Optional extension] define animation using the provided function
+ * @brief [Optional extension] define animation using the provided function
  *                             pointer
  * @param sprite_placement a handle to the sprite placement
- * @param animate_fn a custom function to call when determining the position of
+ * @param fn a custom function to call when determining the position of
  *                   the sprite in each frame.
- * @param priv       private data that is passed to the provided frunction on
+ * @param priv       private data that is passed to the provided function on
  *                   call.
- * @param ax the acceleration in the x direction
- * @param ay the acceleration in the y direction
  */
 void animate_set_animation_function(struct sprite_placement* sprite_placement,
-    animate_fn, void* priv);
+                                    animate_fn fn, void* priv);
 
 /**
  * @brief Return the size in bytes of an animation frame
@@ -220,15 +248,15 @@ size_t animate_frame_size_bytes(struct canvas* canvas);
  * @brief Generate a frame of the animation
  * @details
  * @param canvas the canvas describing the animation
- * @param frane the frame number (starting from 0)
+ * @param frame the frame number (starting from 0)
  * @param frame_rate the number of frames per second in the animation
  * @param buf a buffer provided by the user that is large enough to hold a
           frame.
  * This buffer will contain the frame data on return.
  */
 void animate_generate_frame(const struct canvas* canvas,
-    size_t frame, size_t frame_rate,
-    void* buf);
+                            size_t frame, size_t frame_rate,
+                            void* buf);
 
 
 #endif /* ANIMATE_H */

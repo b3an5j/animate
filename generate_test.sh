@@ -1,3 +1,5 @@
+#!/bin/bash
+
 BREAK="--------------------------------------------------------------------------------"
 
 make test
@@ -14,7 +16,7 @@ echo $BREAK
 
 echo Generating test single frame ...
 if [[ -f "$(dirname $0)/tests/out/simple.dat" ]] then
-    $(dirname $0)/tests/raw_to_nmp.sh 800 600
+    $(dirname $0)/tests/raw_to_img.sh
 else
     echo No simple.dat file generated.
 fi
@@ -22,7 +24,7 @@ echo $BREAK
 
 echo Generating test video ...
 if [[ -f "$(dirname $0)/tests/frames/frame000000.raw" ]] then
-    $(dirname $0)/tests/animate.sh 800 600
+    $(dirname $0)/tests/animate.sh
 else
     echo No frames file generated.
 fi

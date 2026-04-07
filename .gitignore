@@ -1,0 +1,8 @@
+*.o
+
+test
+frames/
+out/
+
+latex/
+Doxyfile

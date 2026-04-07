@@ -35,11 +35,10 @@ void physics_destroy_params(struct params* params)
     free(params);
 }
 
-void physics_set_params(
-    struct params* params,
-    ssize_t initial_x, ssize_t initial_y,
-    ssize_t x_velocity, ssize_t y_velocity,
-    ssize_t x_acceleration, ssize_t y_acceleration)
+void physics_set_params(struct params* params,
+                        ssize_t initial_x, ssize_t initial_y,
+                        ssize_t x_velocity, ssize_t y_velocity,
+                        ssize_t x_acceleration, ssize_t y_acceleration)
 {
     assert(params);
     params->x = (struct direction){
@@ -52,6 +51,7 @@ void physics_set_params(
     };
 }
 
+/* Calculates position difference relative to initial position */
 static ssize_t physics_calculate_posdiff(struct direction* dir, double delta_time)
 {
     assert(dir);
@@ -66,13 +66,17 @@ static ssize_t physics_calculate_posdiff(struct direction* dir, double delta_tim
     return (ssize_t)displacement;
 }
 
-ssize_t physics_calculate_posx(ssize_t initial_x, struct params* params, double delta_time)
+ssize_t physics_calculate_posx(ssize_t initial_x,
+                               struct params* params,
+                               double delta_time)
 {
     assert(params);
     return initial_x + physics_calculate_posdiff(&params->x, delta_time);
 }
 
-ssize_t physics_calculate_posy(ssize_t initial_y, struct params* params, double delta_time)
+ssize_t physics_calculate_posy(ssize_t initial_y,
+                               struct params* params,
+                               double delta_time)
 {
     assert(params);
     return initial_y + physics_calculate_posdiff(&params->y, delta_time);
@@ -80,8 +84,8 @@ ssize_t physics_calculate_posy(ssize_t initial_y, struct params* params, double 
 
 double physics_get_deltatime(size_t frame, size_t frame_rate)
 {
-    assert(frame_rate > 0);
-    if (frame <= 0) {
+    assert(frame_rate >= 0);
+    if (frame == 0) {
         return 0;
     }
     return (double)frame / (double)frame_rate;
