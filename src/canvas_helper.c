@@ -301,7 +301,7 @@ bool circularlist_remove(struct list_node* listnode,
     DBG_PRINT(FREED, "List node");
 
     --circlist->size;
-    DBG_PRINT(CUSTOM, "Removed list node from circular list.");
+    DBG_PRINT(CUSTOM, "Removed list node from circular list.\n");
     return true;
 }
 

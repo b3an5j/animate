@@ -87,58 +87,75 @@ gcc animate.o simple.c -o simple # or use clang
 More example in `main_simple.c`.\
 You can generate the example by running:
 ```bash
-./generate_test.sh
+./generate_example.sh
 ```
 More at **Scripts** section
 
 ## Scripts
 Assuming you are in root dir,
 
-1. `generate_test.sh`\
-Usage:
-```bash
-./generate_test.sh
-```
-It will generate one-frame png ( `out/out.png` ) and the example animation ( `out/anim.mp4` ) along with its frames ( `frames/` ) in `tests/` folder. The executable `test` of `main_simple.c` is also generated.
+1. `generate_example.sh`\
+    Usage:
+    ```bash
+    ./generate_example.sh
+    ```
+    It will generate one-frame png ( `out/out.png` ) and the example animation ( `out/anim.mp4` ) along with its frames ( `frames/` ) in `tests/` folder. The executable `example` of `main_simple.c` is also generated.
 
-2. `tests/animate.sh`\
-Usage :
-```bash
-./tests/animate.sh {FRAMES_FOLDER} {WIDTH} {HEIGHT} {FRATE} {OUTPUT_FILE}
-```
-`FRAMES_FOLDER` : Path to folder containing frames. One must pad left zero (leading zeros) in order for imagemagick to recognise the numbering.\
-`WIDTH` : Width of the canvas\
-`HEIGHT` : Height of the canvas\
-`FRATE` : Frame rate (fps)\
-`OUTPUT_FILE` :  Output file, not only `.mp4`, one may output in `.gif`, etc.\
-Animates given frames in frame folder with given fps.
+2. `tests/run_all_tests.sh`\
+    Usage:
+    ```bash
+    ./tests/run_all_tests.sh (DEBUG)
+    ```
+    `DEBUG`: (Optional) Triggers debug printing of the API functions.\
+    Mini testing framework. The check includes:
+    - Canvas creation
+    - Sprite creation
+    - Sprite placement
+    - Param setting
+    - Placement removal
+    - Frame generation
+    - Layer movement
+    - Physics calculation
+    - Cleanup
 
-3. `tests/img_to_bmp.sh`\
-Usage:
-```bash
-.tests/img_to_bmp.sh {IMG}
-```
-`IMG` : The image file you want to convert\
-Converts an image into `.bmp` for *animate* to digest.
+3. `tests/animate.sh`\
+    Usage :
+    ```bash
+    ./tests/animate.sh {FRAMES_FOLDER} {WIDTH} {HEIGHT} {FRATE} {OUTPUT_FILE}
+    ```
+    `FRAMES_FOLDER` : Path to folder containing frames. One must pad left zero (leading zeros) in order for imagemagick to recognise the numbering.\
+    `WIDTH` : Width of the canvas\
+    `HEIGHT` : Height of the canvas\
+    `FRATE` : Frame rate (fps)\
+    `OUTPUT_FILE` :  Output file, not only `.mp4`, one may output in `.gif`, etc.\
+    Animates given frames in frame folder with given fps.
 
-4. `tests/raw_to_img.sh`\
-Usage:
-```bash
-.tests/raw_to_img.sh {WIDTH} {HEIGHT} {INPUT} {OUTPUT}
-```
-`WIDTH` : Width of the canvas\
-`HEIGHT` : Height of the canvas\
-`INPUT` : The raw `.raw` or `.dat` file (frame) you want to convert\
-`OUTPUT_FILE` :  Output file, not only `.png`, one may output in `.jpg`, etc.\
-Converts a raw pixel grid frame into an image.
+4. `tests/img_to_bmp.sh`\
+    Usage:
+    ```bash
+    .tests/img_to_bmp.sh {IMG}
+    ```
+    `IMG` : The image file you want to convert\
+    Converts an image into `.bmp` for *animate* to digest.
+
+5. `tests/raw_to_img.sh`\
+    Usage:
+    ```bash
+    .tests/raw_to_img.sh {WIDTH} {HEIGHT} {INPUT} {OUTPUT}
+    ```
+    `WIDTH` : Width of the canvas\
+    `HEIGHT` : Height of the canvas\
+    `INPUT` : The raw `.raw` or `.dat` file (frame) you want to convert\
+    `OUTPUT_FILE` :  Output file, not only `.png`, one may output in `.jpg`, etc.\
+    Converts a raw pixel grid frame into an image.
 
 **WARNING:** : If the image comes out glitched, you probably input the wrong  dimension.
 
 ## Make
-**make** / **make default** / **make test** (DEFAULT)\
-Generates `animate.o` and `tests/test`.
+**make** / **make default** / **make example** (DEFAULT)\
+Generates `animate.o` and `tests/example`.
 
-**make animate.o**
+**make animate.o**\
 Generates `animate.o` only.
 
 **make test_asan**\

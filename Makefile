@@ -26,7 +26,7 @@ SRCFILES = $(wildcard $(SRCDIR)/*.c)
 TEST_SRC = main_simple.c
 
 ANIMATE_OBJ = $(addprefix $(OBJDIR)/, $(notdir $(SRCFILES:.c=.o)))
-TEST_OBJ = $(OBJDIR)/main_simple.o
+EXAMPLE_OBJ = $(OBJDIR)/main_simple.o
 
 # to make it verbose, add VERBOSE=1 to the make command
 ifeq ($(VERBOSE),1)
@@ -42,7 +42,7 @@ endif
 # $< = first thing on the right (for .c to .o)
 # $^ = everything on the right (for linking)
 
-default: animate.o test
+default: animate.o example
 
 test_asan:
 	$(Q)$(MAKE) OBJDIR=obj/asan \
@@ -59,13 +59,13 @@ animate.o: $(ANIMATE_OBJ)
 	$(Q)rm -f animate.o
 	@echo "Bundling into \"$@\" ..."
 	$(Q)$(CC) $(LDFLAGS) -r $^ -o $@
-	@echo "Done linking \"animate.o\"."
+	@echo "Done linking \"$@\"."
 
-test: $(TEST_OBJ) animate.o
-	$(Q)rm -f test
-	@echo "Linking test executable \"tests/$@\" ..."
+example: $(EXAMPLE_OBJ) animate.o
+	$(Q)rm -f tests/example
+	@echo "Linking example executable \"tests/$@\" ..."
 	$(Q)$(CC) $(CFLAGS) $^ -o "./tests/$@"
-	@echo "Done compiling \"test\"."
+	@echo "Done compiling \"$@\"."
 
 $(OBJDIR)/%.o: %.c $(HEADERS)
 	@mkdir -p $(dir $@D)
@@ -113,7 +113,7 @@ clobber: clean
 	$(Q)rm -f animate.o
 	$(Q)rm -rf tests/frames
 	$(Q)rm -rf tests/out
-	$(Q)rm -f tests/test
+	$(Q)rm -f tests/example
 	$(Q)rm -f $(API_DOC)
 
-.PHONY: doc clean clobber default test test_asan test_debug animate.o
+.PHONY: doc clean clobber default example test_asan test_debug animate.o

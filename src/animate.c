@@ -413,7 +413,7 @@ void animate_placement_up(struct sprite_placement* sprite_placement)
         sprite_placement->listnode,
         MOVEUP
     );
-    DBG_PRINT(CUSTOM, "Moved sprite UP");
+    DBG_PRINT(CUSTOM, "Moved sprite UP\n");
 }
 
 void animate_placement_down(struct sprite_placement* sprite_placement)
@@ -428,7 +428,7 @@ void animate_placement_down(struct sprite_placement* sprite_placement)
         sprite_placement->listnode,
         MOVEDOWN
     );
-    DBG_PRINT(CUSTOM, "Moved sprite DOWN");
+    DBG_PRINT(CUSTOM, "Moved sprite DOWN\n");
 }
 
 void animate_placement_top(struct sprite_placement* sprite_placement)
@@ -443,7 +443,7 @@ void animate_placement_top(struct sprite_placement* sprite_placement)
         sprite_placement->listnode,
         TOP
     );
-    DBG_PRINT(CUSTOM, "Moved sprite TOP");
+    DBG_PRINT(CUSTOM, "Moved sprite TOP\n");
 }
 
 void animate_placement_bottom(struct sprite_placement* sprite_placement)
@@ -458,7 +458,7 @@ void animate_placement_bottom(struct sprite_placement* sprite_placement)
         sprite_placement->listnode,
         BOTTOM
     );
-    DBG_PRINT(CUSTOM, "Moved sprite BOTTOM");
+    DBG_PRINT(CUSTOM, "Moved sprite BOTTOM\n");
 }
 
 void animate_destroy_placement(struct sprite_placement* sprite_placement)

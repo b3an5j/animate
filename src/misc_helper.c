@@ -24,7 +24,6 @@ void dbg_print_helper(ErrorType code, ...)
     if ((code) == CUSTOM) {
         const char* str = va_arg(args, const char*);
         vfprintf(stderr, str, args);
-        fprintf(stderr, "\n");
     }
     else {
         vfprintf(stderr, dbg_strings[code], args);
